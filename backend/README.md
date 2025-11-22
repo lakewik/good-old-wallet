@@ -2,15 +2,20 @@
 
 ```
 src/
-  ├── config.ts         # Environment configuration loader
-  ├── logger.ts         # Logging utility
-  ├── types.ts          # Type definitions and interfaces
-  ├── chains.ts         # Chain configurations
-  ├── providers.ts      # Ethereum providers setup
-  ├── balances.ts       # Balance query functions
-  ├── gas.ts            # Gas estimation utilities
-  ├── orchestrator.ts   # Main orchestration logic
-  └── index.ts          # Main entry point (exports all modules)
+  ├── setup/              # Configuration and initialization
+  │   ├── config.ts       # Environment configuration loader
+  │   ├── logger.ts       # Logging utility
+  │   ├── types.ts        # Type definitions and interfaces
+  │   ├── chains.ts       # Chain configurations
+  │   └── providers.ts    # Ethereum providers setup
+  ├── handlers/           # Business logic handlers
+  │   ├── balances.ts     # Balance query functions
+  │   └── gas.ts          # Gas estimation utilities
+  ├── services/           # Service layer
+  │   └── orchestrator.ts # Main orchestration logic
+  ├── index.ts            # Library entry point (exports all modules)
+  ├── server.ts           # HTTP API server entry point
+  └── example.ts          # Example usage and demonstrations
 ```
 
 ## Setup
@@ -38,16 +43,43 @@ npm run build
 ```
 
 4. Run in development mode:
+
+**As a library (for programmatic usage):**
 ```bash
 npm run dev
 ```
 
+**As an HTTP API server:**
+```bash
+npm run dev:server
+```
+
+The application has two entry points:
+- `index.ts`: Library exports for programmatic usage
+- `server.ts`: Standalone HTTP API server
+
 ## Usage
+
+### Programmatic Usage
 
 The orchestrator provides two main scenarios:
 
 1. **Single Chain Selection**: Find the best chain to send USDC from if you have enough on one chain
 2. **Multi-Chain Split**: Split a USDC transfer across multiple chains if needed
+
+See `example.ts` for detailed usage examples.
+
+### HTTP API Usage
+
+When running as a server (`npm run dev:server`), the following endpoints are available:
+
+- `GET /health` - Health check endpoint
+- `GET /get-summarized-amounts/:address` - Get balance summary across all chains for an address
+
+Example:
+```bash
+curl http://localhost:7000/get-summarized-amounts/0x742d35Cc6634C0532925a3b844Bc454e4438f44e
+```
 
 ## Features
 
