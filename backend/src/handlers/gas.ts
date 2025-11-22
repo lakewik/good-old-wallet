@@ -103,8 +103,10 @@ export async function estimateUsdcTransferGas(
     // Format amounts for display
     const sendAmountUsdcFormatted = formatAmount(amount, 6); // USDC has 6 decimals
     const totalCostNativeFormatted = formatAmount(totalCost, chainConfig.native.decimals);
+    // Format gas price in Gwei (1 Gwei = 1e9 wei, so we format with 9 decimals)
+    const gasPriceGweiFormatted = formatAmount(gasPrice, 9);
+    // Also calculate integer Gwei for display (may be 0 if less than 1 Gwei)
     const gasPriceGwei = gasPrice > 0n ? (gasPrice / BigInt(1e9)) : 0n;
-    const gasPriceGweiFormatted = formatAmount(gasPriceGwei, 9);
     
     logger.success("Gas estimation successful", {
       chainId,
@@ -115,7 +117,7 @@ export async function estimateUsdcTransferGas(
       gasPrice: gasPrice.toString(),
       totalCostNative: totalCost.toString(),
       totalCostNativeFormatted,
-      gasPriceGwei: gasPrice > 0n ? gasPriceGwei.toString() : "0",
+      gasPriceGwei: gasPriceGwei.toString(),
       gasPriceGweiFormatted,
     });
     
