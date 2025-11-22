@@ -17,6 +17,14 @@ export async function estimateUsdcTransferGas(
     amount: amount.toString(),
   });
   
+  // Validate addresses before proceeding
+  if (!ethers.isAddress(from)) {
+    throw new Error(`Invalid 'from' address: ${from}`);
+  }
+  if (!ethers.isAddress(to)) {
+    throw new Error(`Invalid 'to' address: ${to}`);
+  }
+  
   try {
     const provider = providers[chainId];
     const usdc = CHAINS[chainId].commonTokens.USDC;
