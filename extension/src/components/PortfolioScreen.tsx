@@ -3,8 +3,15 @@ import Button from "./Button";
 import { PageContainer, ContentContainer } from "./Container";
 import { LOGO_PATH, LOGO_ALT } from "../constants";
 import { WalletVault } from "../utils/WalletVault";
-import { getEncryptedVault } from "../utils/storage";
+import {
+  getEncryptedVault,
+  getPendingTransactions,
+  savePendingTransactions,
+  type PendingTransaction,
+} from "../utils/storage";
 import type { EncryptedVault } from "../utils/WalletVault";
+import SendScreen from "./SendScreen";
+import PendingTransactionCard from "./PendingTransactionCard";
 
 interface PortfolioScreenProps {
   password: string;
@@ -196,10 +203,94 @@ export default function PortfolioScreen({
   const [tokens, setTokens] = useState<Token[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [selectedToken, setSelectedToken] = useState<Token | null>(null);
+  const [pendingTransactions, setPendingTransactions] = useState<
+    PendingTransaction[]
+  >([]);
 
   useEffect(() => {
     loadWalletData();
+    loadPendingTransactions();
   }, []);
+
+  const loadPendingTransactions = async () => {
+    try {
+      const transactions = await getPendingTransactions();
+      
+      // Filter out transactions older than 24 hours
+      const now = Date.now();
+      const twentyFourHours = 24 * 60 * 60 * 1000;
+      const recentTransactions = transactions.filter(
+        (tx) => now - tx.createdAt < twentyFourHours,
+      );
+      
+      // Remove old transactions from storage
+      if (recentTransactions.length !== transactions.length) {
+        await savePendingTransactions(recentTransactions);
+      }
+      
+      setPendingTransactions(recentTransactions);
+      
+      // Process pending transactions - mock execution
+      recentTransactions.forEach((tx) => {
+        if (tx.status === "pending") {
+          // Check if we already set a timeout for this transaction
+          const timeoutKey = `timeout_${tx.id}`;
+          if ((window as any)[timeoutKey]) {
+            return; // Already processing
+          }
+          
+          // Mock transaction execution - succeed after 10 seconds
+          // Note: txHash should already exist since transaction was sent, we just update status
+          (window as any)[timeoutKey] = setTimeout(async () => {
+            const updated = await getPendingTransactions();
+            const txIndex = updated.findIndex((t) => t.id === tx.id);
+            if (txIndex !== -1 && updated[txIndex].status === "pending") {
+              const updatedTx = { ...updated[txIndex] };
+              updatedTx.status = "success";
+              updatedTx.subTransactions = updatedTx.subTransactions.map(
+                (subTx) => ({
+                  ...subTx,
+                  status: "success" as const,
+                  // Keep existing txHash and blockExplorerUrl
+                }),
+              );
+              updated[txIndex] = updatedTx;
+              await savePendingTransactions(updated);
+              // Filter again in case transaction is now > 24h old
+              const now2 = Date.now();
+              const filtered = updated.filter(
+                (t) => now2 - t.createdAt < twentyFourHours,
+              );
+              setPendingTransactions(filtered);
+            }
+            delete (window as any)[timeoutKey];
+          }, 10000);
+        }
+      });
+    } catch (error) {
+      console.error("Error loading pending transactions:", error);
+    }
+  };
+
+  const getBlockExplorerUrl = (chainId: number, txHash: string): string => {
+    const explorers: Record<number, string> = {
+      1: "https://etherscan.io/tx/",
+      8453: "https://basescan.org/tx/",
+    };
+    const base = explorers[chainId] || "https://etherscan.io/tx/";
+    return `${base}${txHash}`;
+  };
+
+  const handleTransactionUpdate = async (updated: PendingTransaction) => {
+    const all = await getPendingTransactions();
+    const index = all.findIndex((t) => t.id === updated.id);
+    if (index !== -1) {
+      all[index] = updated;
+      await savePendingTransactions(all);
+      setPendingTransactions(all);
+    }
+  };
 
   const loadWalletData = async () => {
     try {
@@ -294,14 +385,17 @@ export default function PortfolioScreen({
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
   };
 
-  const handleSend = () => {
-    // Empty function for now
-    console.log("Send button clicked");
+  const handleTokenSend = (token: Token) => {
+    setSelectedToken(token);
   };
 
-  const handleTokenSend = (token: Token) => {
-    // Empty function for now
-    console.log("Send token clicked:", token);
+  const handleBackFromSend = () => {
+    setSelectedToken(null);
+    loadPendingTransactions(); // Reload pending transactions when returning
+  };
+
+  const handleCancelSend = () => {
+    setSelectedToken(null);
   };
 
   if (isLoading) {
@@ -319,6 +413,17 @@ export default function PortfolioScreen({
       >
         Loading...
       </div>
+    );
+  }
+
+  // Show send screen if a token is selected
+  if (selectedToken) {
+    return (
+      <SendScreen
+        token={selectedToken}
+        onBack={handleBackFromSend}
+        onCancel={handleCancelSend}
+      />
     );
   }
 
@@ -473,56 +578,36 @@ export default function PortfolioScreen({
             </div>
           </div>
 
-          {/* Send Button */}
-          <div style={{ width: "100%" }}>
-            <button
-              onClick={handleSend}
+          {/* Recent Transactions */}
+          {pendingTransactions.length > 0 && (
+            <div
               style={{
                 width: "100%",
-                padding: "var(--spacing-md) var(--spacing-lg)",
-                border: "1px solid var(--border-primary)",
-                borderRadius: "var(--border-radius)",
-                fontFamily: "var(--font-family-sans)",
-                fontSize: "10px",
-                fontWeight: 600,
-                cursor: "pointer",
-                letterSpacing: "0.5px",
-                textTransform: "uppercase",
-                position: "relative",
-                color: "var(--text-primary)",
-                borderColor: "var(--border-focus)",
-                background: "var(--bg-button-primary)",
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "var(--spacing-xs)",
-                transition: "all var(--transition-fast)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.35)";
-                e.currentTarget.style.background =
-                  "var(--bg-button-primary-hover)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "var(--border-focus)";
-                e.currentTarget.style.background = "var(--bg-button-primary)";
+                flexDirection: "column",
+                gap: "var(--spacing-sm)",
+                marginTop: "var(--spacing-lg)",
               }}
             >
-              <span>Send</span>
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              <div
+                style={{
+                  fontSize: "10px",
+                  color: "var(--text-muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: "1px",
+                }}
               >
-                <path d="M9 18l6-6-6-6" />
-              </svg>
-            </button>
-          </div>
+                Recent Transactions
+              </div>
+              {pendingTransactions.map((tx) => (
+                <PendingTransactionCard
+                  key={tx.id}
+                  transaction={tx}
+                  onUpdate={handleTransactionUpdate}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Tokens List */}
           <div
@@ -531,6 +616,7 @@ export default function PortfolioScreen({
               display: "flex",
               flexDirection: "column",
               gap: "var(--spacing-sm)",
+              marginTop: "var(--spacing-lg)",
             }}
           >
             <div

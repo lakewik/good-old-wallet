@@ -7,6 +7,7 @@ import type { EncryptedVault } from "./WalletVault";
 
 const STORAGE_KEYS = {
   ENCRYPTED_VAULT: "encrypted_vault",
+  PENDING_TRANSACTIONS: "pending_transactions",
 } as const;
 
 export interface StoredWalletData {
@@ -85,6 +86,76 @@ export async function clearWallet(): Promise<void> {
         );
       } else {
         resolve();
+      }
+    });
+  });
+}
+
+export type TransactionStatus = "pending" | "success" | "failed";
+
+export interface SubTransaction {
+  chainId: number;
+  chainName: string;
+  amountUsdc: string;
+  gasCostUsdc: string;
+  status: TransactionStatus;
+  txHash?: string;
+  blockExplorerUrl?: string;
+}
+
+export interface PendingTransaction {
+  id: string;
+  recipientAddress: string;
+  tokenSymbol: string;
+  totalAmount: string;
+  totalGasCostUsdc: string;
+  type: "multi" | "single";
+  subTransactions: SubTransaction[];
+  status: TransactionStatus;
+  createdAt: number;
+}
+
+/**
+ * Save pending transactions to chrome.storage.local
+ */
+export async function savePendingTransactions(
+  transactions: PendingTransaction[],
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.set(
+      { [STORAGE_KEYS.PENDING_TRANSACTIONS]: transactions },
+      () => {
+        if (chrome.runtime.lastError) {
+          reject(
+            new Error(
+              `Failed to save pending transactions: ${chrome.runtime.lastError.message}`,
+            ),
+          );
+        } else {
+          resolve();
+        }
+      },
+    );
+  });
+}
+
+/**
+ * Get pending transactions from chrome.storage.local
+ */
+export async function getPendingTransactions(): Promise<PendingTransaction[]> {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get([STORAGE_KEYS.PENDING_TRANSACTIONS], (result) => {
+      if (chrome.runtime.lastError) {
+        reject(
+          new Error(
+            `Failed to retrieve pending transactions: ${chrome.runtime.lastError.message}`,
+          ),
+        );
+      } else {
+        const transactions = result[STORAGE_KEYS.PENDING_TRANSACTIONS] as
+          | PendingTransaction[]
+          | undefined;
+        resolve(transactions || []);
       }
     });
   });
