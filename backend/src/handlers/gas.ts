@@ -1,8 +1,8 @@
 import { ethers } from "ethers";
-import { ChainId, Address } from "./types.js";
-import { providers } from "./providers.js";
-import { CHAINS } from "./chains.js";
-import { logger } from "./logger.js";
+import { ChainId, Address } from "../setup/types.js";
+import { providers } from "../setup/providers.js";
+import { CHAINS } from "../setup/chains.js";
+import { logger } from "../setup/logger.js";
 
 export async function estimateUsdcTransferGas(
   chainId: ChainId,

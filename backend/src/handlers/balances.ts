@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
-import { ChainId, Address, TokenConfig, NATIVE_TOKEN_ADDRESS } from "./types.js";
-import { providers } from "./providers.js";
-import { logger } from "./logger.js";
+import { ChainId, Address, TokenConfig, NATIVE_TOKEN_ADDRESS } from "../setup/types.js";
+import { providers } from "../setup/providers.js";
+import { logger } from "../setup/logger.js";
 
 // Balance storage structure: chainId -> wallet -> tokenAddress -> balance (as string for JSON compatibility)
 type BalanceStorage = Record<

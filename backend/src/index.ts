@@ -1,13 +1,13 @@
 // Main entry point for the abstracted wallet orchestrator
-import "./config.js";
-import { logger } from "./logger.js";
+import "./setup/config.js";
+import { logger } from "./setup/logger.js";
 
 logger.info("Abstracted Wallet Orchestrator initialized");
 
-export * from "./types.js";
-export * from "./chains.js";
-export * from "./providers.js";
-export * from "./balances.js";
-export * from "./gas.js";
-export * from "./orchestrator.js";
-export * from "./logger.js";
+export * from "./setup/types.js";
+export * from "./setup/chains.js";
+export * from "./setup/providers.js";
+export * from "./handlers/balances.js";
+export * from "./handlers/gas.js";
+export * from "./services/orchestrator.js";
+export * from "./setup/logger.js";
