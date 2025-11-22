@@ -23,28 +23,26 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     // e.g. keep at least 0.03 ETH (~few swaps + sends)
     minNativeBalance: BigInt("30000000000000000"), // 0.03 ETH
   },
-
-  // [ChainId.ARBITRUM_ONE]: {
-  //   id: ChainId.ARBITRUM_ONE,
-  //   name: "Arbitrum One",
-  //   rpcUrl: process.env.RPC_ARBITRUM!,
-  //   native: {
-  //     symbol: "ETH",
-  //     decimals: 18,
-  //     address: NATIVE_TOKEN_ADDRESS,
-  //     isNative: true,
-  //   },
-  //   commonTokens: {
-  //     USDC: {
-  //       symbol: "USDC",
-  //       decimals: 6,
-  //       // Native USDC on Arbitrum One
-  //       address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
-  //     },
-  //   },
-  //   minNativeBalance: BigInt("5000000000000000"), // 0.005 ETH
-  // },
-
+  [ChainId.ARBITRUM_ONE]: {
+    id: ChainId.ARBITRUM_ONE,
+    name: "Arbitrum One",
+    rpcUrl: process.env.RPC_ARBITRUM!,
+    native: {
+      symbol: "ETH",
+      decimals: 18,
+      address: NATIVE_TOKEN_ADDRESS,
+      isNative: true,
+    },
+    commonTokens: {
+      USDC: {
+        symbol: "USDC",
+        decimals: 6,
+        // Native USDC on Arbitrum One
+        address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+      },
+    },
+    minNativeBalance: BigInt("5000000000000000"), // 0.005 ETH
+  },
   [ChainId.BASE]: {
     id: ChainId.BASE,
     name: "Base",
@@ -66,34 +64,54 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     minNativeBalance: BigInt("3000000000000000"), // 0.003 ETH
   },
 
-  // [ChainId.OPTIMISM]: {
-  //   id: ChainId.OPTIMISM,
-  //   name: "Optimism",
-  //   rpcUrl: process.env.RPC_OPTIMISM!,
-  //   native: {
-  //     symbol: "ETH",
-  //     decimals: 18,
-  //     address: NATIVE_TOKEN_ADDRESS,
-  //     isNative: true,
-  //   },
-  //   commonTokens: {
-  //     USDC: {
-  //       symbol: "USDC",
-  //       decimals: 6,
-  //       // Native USDC on OP Mainnet
-  //       address: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-  //     },
-  //   },
-  //   minNativeBalance: BigInt("3000000000000000"), // 0.003 ETH
-  // },
+  [ChainId.OPTIMISM]: {
+    id: ChainId.OPTIMISM,
+    name: "Optimism",
+    rpcUrl: process.env.RPC_OPTIMISM!,
+    native: {
+      symbol: "ETH",
+      decimals: 18,
+      address: NATIVE_TOKEN_ADDRESS,
+      isNative: true,
+    },
+    commonTokens: {
+      USDC: {
+        symbol: "USDC",
+        decimals: 6,
+        // Native USDC on OP Mainnet
+        address: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+      },
+    },
+    minNativeBalance: BigInt("3000000000000000"), // 0.003 ETH
+  },
+  [ChainId.GNOSIS]: {
+    id: ChainId.GNOSIS,
+    name: "Gnosis",
+    rpcUrl: process.env.RPC_GNOSIS!,
+    native: {
+      symbol: "xDAI",
+      decimals: 18,
+      address: "0xaA7ec943fc665162D5adc0a23dF5B8F983F3F253",
+      isNative: true,
+    },
+    commonTokens: {
+      USDC: {
+        symbol: "USDC",
+        decimals: 6,
+        // Gnosis xDAI Bridged USDC
+        address: "0xddafbb505ad214d7b80b1f830fccc89b60fb7a83",
+      },
+    },
+    minNativeBalance: BigInt("100000000000000000"), // 0.1 xDAI
+  },
 };
 
 // Log chain initialization
 
-// logger.info("Initializing chain configurations", {
-//   chains: Object.values(CHAINS).map(c => ({
-//     id: c.id,
-//     name: c.name,
-//     hasRpcUrl: !!c.rpcUrl,
-//   })),
-// });
+logger.info("Initializing chain configurations", {
+  chains: Object.values(CHAINS).map(c => ({
+    id: c.id,
+    name: c.name,
+    hasRpcUrl: !!c.rpcUrl,
+  })),
+});

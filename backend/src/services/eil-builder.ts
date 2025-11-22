@@ -55,7 +55,11 @@ function createUsdcToken(networkEnv: NetworkEnvironment): MultichainToken {
   // The SDK should be available through CrossChainSdk instance
   // For now, we'll create the token directly using MultichainToken constructor
   // In practice, you'd use: networkEnv.sdk.createToken("USDC", deployments)
-  return new MultichainToken("USDC", networkEnv.chains, deployments);
+  
+  // Convert Record to AddressPerChain format (array of [chainId, address] tuples)
+  const addressPerChain = Object.entries(deployments) as [string | number | bigint, Address][];
+  
+  return new MultichainToken("USDC", networkEnv.chains, addressPerChain);
 }
 
 /**

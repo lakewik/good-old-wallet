@@ -8,12 +8,21 @@ importers:
 
   .:
     dependencies:
+      '@aboutcircles/sdk-rpc':
+        specifier: ^0.1.1
+        version: 0.1.1(typescript@5.9.3)
       '@eil-protocol/accounts':
         specifier: ^0.1.2
         version: 0.1.2(viem@2.39.3(typescript@5.9.3))
       '@eil-protocol/sdk':
         specifier: ^0.1.2
         version: 0.1.2
+      '@safe-global/protocol-kit':
+        specifier: ^6.1.2
+        version: 6.1.2(typescript@5.9.3)
+      '@safe-global/safe-core-sdk-types':
+        specifier: ^5.1.0
+        version: 5.1.0(typescript@5.9.3)
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1
@@ -41,6 +50,15 @@ importers:
         version: 5.9.3
 
 packages:
+
+  '@aboutcircles/sdk-rpc@0.1.1':
+    resolution: {integrity: sha512-YGsgKzbVa8eASA0IL48ZsxSCLAuXhlBRj8Pp5iXZknIEZ8zUlLhmJR7guYk4Z1LEV833JkoFgWYnb0H+vleu9g==}
+
+  '@aboutcircles/sdk-types@0.1.1':
+    resolution: {integrity: sha512-zJNx13EOJU7x9Z2IKV9WihyQG4nLlNYq2Q9bjaZiJSkohpjqUdjOjGJ4Ha5PxTn+JD19wd5zVtP3zUQhqzVkpw==}
+
+  '@aboutcircles/sdk-utils@0.1.1':
+    resolution: {integrity: sha512-K6M9fcsdI76f7rTshS3ytMhFW/X+mg+/5XN0lE27Roh7Pi4sIyL67fUZnqT629FsMyuOjFdhckqIAsusPSKY3A==}
 
   '@account-abstraction/contracts@0.9.0-rc.1':
     resolution: {integrity: sha512-NEii5cuCEJaQ0ZUPAh6JtP/yuozLX4k9BJVu7ytX0QAjc4cT038H0fN0lAO129ou/Uwabj5xY9X+z06ChM3p7A==}
@@ -245,6 +263,10 @@ packages:
     resolution: {integrity: sha512-k11yZxZg+t+gWvBbIswW0yoJlu8cHOC7dhunwOzoWH/mXGBiYyR4YY6hAEK/3EUs4UpB8la1RfdRpeGsFHkWsA==}
     engines: {node: ^14.21.3 || >=16}
 
+  '@noble/curves@1.9.7':
+    resolution: {integrity: sha512-gbKGcRUYIjA3/zCCNaWDciTMFI0dCkvou3TL8Zmy5Nc7sJ47a0jtOeZoTaMxkuqRo9cRhjOdZJXegxYE5FN/xw==}
+    engines: {node: ^14.21.3 || >=16}
+
   '@noble/hashes@1.3.2':
     resolution: {integrity: sha512-MVC8EAQp7MvEcm30KWENFjgR+Mkmf+D189XJTkFIlwohU5hcBbn1ZkKq7KVTi2Hme3PMGF390DaL52beVrIihQ==}
     engines: {node: '>= 16'}
@@ -258,6 +280,25 @@ packages:
 
   '@openzeppelin/contracts@5.5.0':
     resolution: {integrity: sha512-R8hq4zmKKWP2c7OxeRgAcjZwvF5W0Qq2OIX7degrtdM52Q9xYr4MLJdUAVPKGUewNJ1qo+M6YiZLLnNUnjP/gg==}
+
+  '@peculiar/asn1-schema@2.6.0':
+    resolution: {integrity: sha512-xNLYLBFTBKkCzEZIw842BxytQQATQv+lDTCEMZ8C196iJcJJMBUZxrhSTxLaohMyKK8QlzRNTRkUmanucnDSqg==}
+
+  '@safe-global/protocol-kit@6.1.2':
+    resolution: {integrity: sha512-cTpPdUAS2AMfGCkD1T601rQNjT0rtMQLA2TH7L/C+iFPAC6WrrDFop2B9lzeHjczlnVzrRpfFe4cL1bLrJ9NZw==}
+
+  '@safe-global/safe-core-sdk-types@5.1.0':
+    resolution: {integrity: sha512-UzXR4zWmVzux25FcIm4H049QhZZpVpIBL5HE+V0p5gHpArZROL+t24fZmsKUf403CtBxIJM5zZSVQL0nFJi+IQ==}
+    deprecated: 'WARNING: This project has been renamed to @safe-global/types-kit. Please, migrate from @safe-global/safe-core-sdk-types@5.1.0 to @safe-global/types-kit@1.0.0.'
+
+  '@safe-global/safe-deployments@1.37.49':
+    resolution: {integrity: sha512-132QgqMY1/HktXqmda/uPp5b+73UXTgKRB00Xgc1kduFqceSw/ZyF1Q9jJjbND9q91hhapnXhYKWN2/HiWkRcg==}
+
+  '@safe-global/safe-modules-deployments@2.2.21':
+    resolution: {integrity: sha512-fveOlRv0ccwsuaZjP1u7ZbXrwCyqMTYYiqETOGo8NdzTaceRUyR9TNzagSWovOSuHPVyUGJ9lnsxizikt/+PiQ==}
+
+  '@safe-global/types-kit@3.0.0':
+    resolution: {integrity: sha512-AZWIlR5MguDPdGiOj7BB4JQPY2afqmWQww1mu8m8Oi16HHBW99G01kFOu4NEHBwEU1cgwWOMY19hsI5KyL4W2w==}
 
   '@scarf/scarf@1.4.0':
     resolution: {integrity: sha512-xxeapPiUXdZAE3che6f3xogoJPeZgig6omHEy1rIY5WVsB3H2BHNnZH+gHG6x91SCWyQCzWGsuL2Hh3ClO5/qQ==}
@@ -310,11 +351,26 @@ packages:
       zod:
         optional: true
 
+  abitype@1.2.0:
+    resolution: {integrity: sha512-fD3ROjckUrWsybaSor2AdWxzA0e/DSyV2dA4aYd7bd8orHsoJjl09fOgKfUkTDfk0BsDGBf4NBgu/c7JoS2Npw==}
+    peerDependencies:
+      typescript: '>=5.0.4'
+      zod: ^3.22.0 || ^4.0.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+      zod:
+        optional: true
+
   aes-js@4.0.0-beta.5:
     resolution: {integrity: sha512-G965FqalsNyrPqgEGON7nIx1e/OVENSgiEIzyC63haUMuvNnwIgIjMs52hlTCKhkBny7A2ORNlfY9Zu+jmGk1Q==}
 
   argparse@2.0.1:
     resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
+
+  asn1js@3.0.6:
+    resolution: {integrity: sha512-UOCGPYbl0tv8+006qks/dTgV9ajs97X2p0FAbyS2iyCRrmLSRolDaHdp+v/CLgnzHc3fVB+CwYiUmei7ndFcgA==}
+    engines: {node: '>=12.0.0'}
 
   balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
@@ -408,6 +464,9 @@ packages:
   minimatch@3.1.2:
     resolution: {integrity: sha512-J7p63hRiAjw1NDEww1W7i37+ByIrOWO5XQQAzZ3VOcL0PNybwpfmV/N05zFAzwQ9USyEcX6t3UO+K5aqBQOIHw==}
 
+  multiformats@13.4.1:
+    resolution: {integrity: sha512-VqO6OSvLrFVAYYjgsr8tyv62/rCQhPgsZUXLTqoFLSgdkgiUYKYeArbt1uWLlEpkjxQe+P0+sHlbPEte1Bi06Q==}
+
   once@1.4.0:
     resolution: {integrity: sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==}
 
@@ -435,8 +494,20 @@ packages:
       ox:
         optional: true
 
+  pvtsutils@1.3.6:
+    resolution: {integrity: sha512-PLgQXQ6H2FWCaeRak8vvk1GW462lMxB5s3Jm673N82zI4vqtVUPuZdffdZbPDFRoU8kAhItWFtPCWiPpp4/EDg==}
+
+  pvutils@1.1.5:
+    resolution: {integrity: sha512-KTqnxsgGiQ6ZAzZCVlJH5eOjSnvlyEgx1m8bkRJfOhmGRqfo5KLvmAlACQkrjEtOQ4B7wF9TdSLIs9O90MX9xA==}
+    engines: {node: '>=16.0.0'}
+
   resolve-pkg-maps@1.0.0:
     resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
+
+  semver@7.7.3:
+    resolution: {integrity: sha512-SdsKMrI9TdgjdweUSR9MweHA4EJ8YxHn8DFaDisvhVlUOe4BF1tLD7GAj0lIqWVl+dPb/rExr0Btby5loQm20Q==}
+    engines: {node: '>=10'}
+    hasBin: true
 
   swagger-jsdoc@6.2.8:
     resolution: {integrity: sha512-VPvil1+JRpmJ55CgAtn8DIcpBs0bL5L3q5bVQvF4tAW/k/9JYSj7dCpaYCAv5rufe0vcCbBRQXGvzpkWjvLklQ==}
@@ -452,6 +523,9 @@ packages:
 
   tslib@2.7.0:
     resolution: {integrity: sha512-gLXCKdN1/j47AiHiOkJN69hJmcbGTHI0ImLmbYLHykhgeN0jVGola9yVjFgzCUklsZQMW55o+dW7IXv3RCXDzA==}
+
+  tslib@2.8.1:
+    resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
   tsx@4.20.6:
     resolution: {integrity: sha512-ytQKuwgmrrkDTFP4LjR0ToE2nqgy886GpvRSpU0JAnrdBYppuY5rLkRUYPU1yCryb24SsKBTL/hlDQAEFVwtZg==}
@@ -518,6 +592,29 @@ packages:
     hasBin: true
 
 snapshots:
+
+  '@aboutcircles/sdk-rpc@0.1.1(typescript@5.9.3)':
+    dependencies:
+      '@aboutcircles/sdk-types': 0.1.1(typescript@5.9.3)
+      '@aboutcircles/sdk-utils': 0.1.1(typescript@5.9.3)
+    transitivePeerDependencies:
+      - typescript
+      - zod
+
+  '@aboutcircles/sdk-types@0.1.1(typescript@5.9.3)':
+    dependencies:
+      abitype: 1.2.0(typescript@5.9.3)
+    transitivePeerDependencies:
+      - typescript
+      - zod
+
+  '@aboutcircles/sdk-utils@0.1.1(typescript@5.9.3)':
+    dependencies:
+      '@aboutcircles/sdk-types': 0.1.1(typescript@5.9.3)
+      multiformats: 13.4.1
+    transitivePeerDependencies:
+      - typescript
+      - zod
 
   '@account-abstraction/contracts@0.9.0-rc.1':
     dependencies:
@@ -655,6 +752,10 @@ snapshots:
     dependencies:
       '@noble/hashes': 1.8.0
 
+  '@noble/curves@1.9.7':
+    dependencies:
+      '@noble/hashes': 1.8.0
+
   '@noble/hashes@1.3.2': {}
 
   '@noble/hashes@1.8.0': {}
@@ -663,13 +764,57 @@ snapshots:
 
   '@openzeppelin/contracts@5.5.0': {}
 
+  '@peculiar/asn1-schema@2.6.0':
+    dependencies:
+      asn1js: 3.0.6
+      pvtsutils: 1.3.6
+      tslib: 2.8.1
+    optional: true
+
+  '@safe-global/protocol-kit@6.1.2(typescript@5.9.3)':
+    dependencies:
+      '@safe-global/safe-deployments': 1.37.49
+      '@safe-global/safe-modules-deployments': 2.2.21
+      '@safe-global/types-kit': 3.0.0(typescript@5.9.3)
+      abitype: 1.2.0(typescript@5.9.3)
+      semver: 7.7.3
+      viem: 2.39.3(typescript@5.9.3)
+    optionalDependencies:
+      '@noble/curves': 1.9.7
+      '@peculiar/asn1-schema': 2.6.0
+    transitivePeerDependencies:
+      - bufferutil
+      - typescript
+      - utf-8-validate
+      - zod
+
+  '@safe-global/safe-core-sdk-types@5.1.0(typescript@5.9.3)':
+    dependencies:
+      abitype: 1.2.0(typescript@5.9.3)
+    transitivePeerDependencies:
+      - typescript
+      - zod
+
+  '@safe-global/safe-deployments@1.37.49':
+    dependencies:
+      semver: 7.7.3
+
+  '@safe-global/safe-modules-deployments@2.2.21': {}
+
+  '@safe-global/types-kit@3.0.0(typescript@5.9.3)':
+    dependencies:
+      abitype: 1.2.0(typescript@5.9.3)
+    transitivePeerDependencies:
+      - typescript
+      - zod
+
   '@scarf/scarf@1.4.0': {}
 
   '@scure/base@1.2.6': {}
 
   '@scure/bip32@1.7.0':
     dependencies:
-      '@noble/curves': 1.9.1
+      '@noble/curves': 1.9.7
       '@noble/hashes': 1.8.0
       '@scure/base': 1.2.6
 
@@ -708,9 +853,20 @@ snapshots:
     optionalDependencies:
       typescript: 5.9.3
 
+  abitype@1.2.0(typescript@5.9.3):
+    optionalDependencies:
+      typescript: 5.9.3
+
   aes-js@4.0.0-beta.5: {}
 
   argparse@2.0.1: {}
+
+  asn1js@3.0.6:
+    dependencies:
+      pvtsutils: 1.3.6
+      pvutils: 1.1.5
+      tslib: 2.8.1
+    optional: true
 
   balanced-match@1.0.2: {}
 
@@ -825,6 +981,8 @@ snapshots:
     dependencies:
       brace-expansion: 1.1.12
 
+  multiformats@13.4.1: {}
+
   once@1.4.0:
     dependencies:
       wrappy: 1.0.2
@@ -839,7 +997,7 @@ snapshots:
       '@noble/hashes': 1.8.0
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0
-      abitype: 1.1.0(typescript@5.9.3)
+      abitype: 1.2.0(typescript@5.9.3)
       eventemitter3: 5.0.1
     optionalDependencies:
       typescript: 5.9.3
@@ -852,7 +1010,17 @@ snapshots:
     dependencies:
       viem: 2.39.3(typescript@5.9.3)
 
+  pvtsutils@1.3.6:
+    dependencies:
+      tslib: 2.8.1
+    optional: true
+
+  pvutils@1.1.5:
+    optional: true
+
   resolve-pkg-maps@1.0.0: {}
+
+  semver@7.7.3: {}
 
   swagger-jsdoc@6.2.8(openapi-types@12.1.3):
     dependencies:
@@ -876,6 +1044,9 @@ snapshots:
       '@scarf/scarf': 1.4.0
 
   tslib@2.7.0: {}
+
+  tslib@2.8.1:
+    optional: true
 
   tsx@4.20.6:
     dependencies:
