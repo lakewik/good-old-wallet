@@ -1,8 +1,8 @@
-import "./config.js"; // Load environment variables
+import "./setup/config.js"; // Load environment variables
 import http from "http";
 import url from "url";
-import { logger } from "./logger.js";
-import { getNativeBalance, getErc20Balance } from "./balances.js";
+import { logger } from "./setup/logger.js";
+import { getNativeBalance, getErc20Balance } from "./handlers/balances.js";
 import { ChainId, CHAINS, type Address } from "./index.js";
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 7000;

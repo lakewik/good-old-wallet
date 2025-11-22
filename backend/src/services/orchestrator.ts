@@ -1,8 +1,8 @@
-import { ChainId, Address, ChainQuote, SplitPlan, SplitLeg, UsdcSendPlan } from "./types.js";
-import { CHAINS } from "./chains.js";
-import { getErc20Balance } from "./balances.js";
-import { estimateUsdcTransferGas, gasCostInUsdc } from "./gas.js";
-import { logger } from "./logger.js";
+import { ChainId, Address, ChainQuote, SplitPlan, SplitLeg, UsdcSendPlan } from "../setup/types.js";
+import { CHAINS } from "../setup/chains.js";
+import { getErc20Balance } from "../handlers/balances.js";
+import { estimateUsdcTransferGas, gasCostInUsdc } from "../handlers/gas.js";
+import { logger } from "../setup/logger.js";
 
 // Scenario 1: Select best single chain for USDC send
 export async function selectBestSingleChainForUsdcSend(
