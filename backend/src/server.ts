@@ -2,128 +2,14 @@ import "./setup/config.js"; // Load environment variables
 import http from "http";
 import url from "url";
 import { logger } from "./setup/logger.js";
-import { getNativeBalance, getErc20Balance } from "./handlers/balances.js";
-import { ChainId, CHAINS, type Address } from "./index.js";
+import { handleAssetsRequest, handleVerifyRequest, handleSettleRequest } from "./routes/index.js";
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 7000;
-
-interface ChainBalance {
-  chainId: number;
-  chainName: string;
-  native: {
-    symbol: string;
-    balance: string; // in wei
-    balanceFormatted: string; // human readable
-  };
-  usdc: {
-    balance: string; // in smallest unit (6 decimals)
-    balanceFormatted: string; // human readable
-  };
-}
-
-interface SummarizedAmountsResponse {
-  address: Address;
-  chains: ChainBalance[];
-  totals: {
-    native: {
-      totalWei: string;
-      totalFormatted: string;
-      symbol: string;
-    };
-    usdc: {
-      totalSmallestUnit: string;
-      totalFormatted: string;
-    };
-  };
-}
-
-function formatBalance(balance: bigint, decimals: number): string {
-  if (balance === 0n) {
-    return "0";
-  }
-
-  const divisor = BigInt(10 ** decimals);
-  const whole = balance / divisor;
-  const remainder = balance % divisor;
-
-  if (remainder === 0n) {
-    return whole.toString();
-  }
-
-  const remainderStr = remainder.toString().padStart(decimals, "0");
-  const trimmed = remainderStr.replace(/0+$/, "");
-  return `${whole}.${trimmed}`;
-}
-
-async function getSummarizedAmounts(address: Address): Promise<SummarizedAmountsResponse> {
-  const chains: ChainBalance[] = [];
-  let totalNativeWei = 0n;
-  let totalUsdcSmallestUnit = 0n;
-  let nativeSymbol = "ETH"; // default
-
-  for (const chainIdValue of Object.values(ChainId)) {
-    // Filter out string keys from numeric enum
-    if (typeof chainIdValue !== "number") continue;
-
-    const chainId = chainIdValue as ChainId;
-    const chain = CHAINS[chainId];
-
-    // Get native balance
-    const nativeBalance = getNativeBalance(chainId, address);
-    const nativeFormatted = formatBalance(nativeBalance, chain.native.decimals);
-    totalNativeWei += nativeBalance;
-    nativeSymbol = chain.native.symbol;
-
-    // Get USDC balance
-    let usdcBalance = 0n;
-    let usdcFormatted = "0";
-    const usdcToken = chain.commonTokens.USDC;
-    if (usdcToken) {
-      usdcBalance = getErc20Balance(chainId, usdcToken, address);
-      usdcFormatted = formatBalance(usdcBalance, usdcToken.decimals);
-      totalUsdcSmallestUnit += usdcBalance;
-    }
-
-    chains.push({
-      chainId: chainId,
-      chainName: chain.name,
-      native: {
-        symbol: chain.native.symbol,
-        balance: nativeBalance.toString(),
-        balanceFormatted: nativeFormatted,
-      },
-      usdc: {
-        balance: usdcBalance.toString(),
-        balanceFormatted: usdcFormatted,
-      },
-    });
-  }
-
-  return {
-    address,
-    chains,
-    totals: {
-      native: {
-        totalWei: totalNativeWei.toString(),
-        totalFormatted: formatBalance(totalNativeWei, 18), // Assuming all native tokens are 18 decimals
-        symbol: nativeSymbol,
-      },
-      usdc: {
-        totalSmallestUnit: totalUsdcSmallestUnit.toString(),
-        totalFormatted: formatBalance(totalUsdcSmallestUnit, 6), // USDC has 6 decimals
-      },
-    },
-  };
-}
-
-function isValidAddress(address: string): address is Address {
-  return /^0x[a-fA-F0-9]{40}$/.test(address);
-}
 
 const server = http.createServer(async (req, res) => {
   // Enable CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   // Handle OPTIONS request
@@ -154,36 +40,23 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Get summarized amounts endpoint
-  const summarizedAmountsMatch = pathname?.match(/^\/get-summarized-amounts\/(.+)$/);
-  if (summarizedAmountsMatch && req.method === "GET") {
-    const address = summarizedAmountsMatch[1] as string;
+  // Assets endpoint (renamed from get-summarized-amounts)
+  const assetsMatch = pathname?.match(/^\/assets\/(.+)$/);
+  if (assetsMatch && req.method === "GET") {
+    const address = assetsMatch[1] as string;
+    await handleAssetsRequest(req, res, address);
+    return;
+  }
 
-    if (!isValidAddress(address)) {
-      res.writeHead(400, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({
-          error: "Invalid address format",
-          message: "Address must be a valid Ethereum address (0x followed by 40 hex characters)",
-        }),
-      );
-      return;
-    }
+  // Verify endpoint
+  if (pathname === "/verify") {
+    await handleVerifyRequest(req, res);
+    return;
+  }
 
-    try {
-      const summarizedAmounts = await getSummarizedAmounts(address as Address);
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify(summarizedAmounts, null, 2));
-    } catch (error) {
-      logger.error("Error getting summarized amounts", error);
-      res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({
-          error: "Internal server error",
-          message: error instanceof Error ? error.message : String(error),
-        }),
-      );
-    }
+  // Settle endpoint
+  if (pathname === "/settle") {
+    await handleSettleRequest(req, res);
     return;
   }
 
@@ -195,7 +68,9 @@ const server = http.createServer(async (req, res) => {
       message: `Route ${pathname} not found`,
       availableRoutes: [
         "GET /health",
-        "GET /get-summarized-amounts/:address",
+        "GET /assets/:address",
+        "POST /verify",
+        "POST /settle",
       ],
     }),
   );
@@ -224,12 +99,16 @@ server.listen(PORT, "localhost", () => {
     port: PORT,
     endpoints: [
       "GET /health",
-      "GET /get-summarized-amounts/:address",
+      "GET /assets/:address",
+      "POST /verify",
+      "POST /settle",
     ],
   });
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
-  console.log(`💰 Get summarized amounts: http://localhost:${PORT}/get-summarized-amounts/:address`);
+  console.log(`💰 Assets: http://localhost:${PORT}/assets/:address`);
+  console.log(`✅ Verify: http://localhost:${PORT}/verify`);
+  console.log(`🔒 Settle: http://localhost:${PORT}/settle`);
 });
 
 // Graceful shutdown
