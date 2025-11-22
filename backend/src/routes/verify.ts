@@ -1,10 +1,9 @@
 import http from "http";
 import { logger } from "../setup/logger.js";
-import { x402Service, type EvmSafeWcrcPaymentPayload, type PaymentDetails } from "../services/x402.js";
+import { x402Service, type EvmSafeWcrcPaymentPayload } from "../services/x402.js";
 
 interface VerifyRequest {
   paymentPayload: EvmSafeWcrcPaymentPayload;
-  paymentDetails: PaymentDetails;
 }
 
 /**
@@ -20,10 +19,6 @@ interface VerifyRequest {
  *     "safeTx": { ... },
  *     "signatures": "0x..."
  *   },
- *   "paymentDetails": {
- *     "receiver": "0x...",
- *     "amount": "1000000"
- *   }
  * }
  */
 export async function handleVerifyRequest(
@@ -59,7 +54,6 @@ export async function handleVerifyRequest(
       // Call X402 service to verify payment
       const result = await x402Service.verifyPayment(
         data.paymentPayload,
-        data.paymentDetails
       );
 
       const statusCode = result.valid ? 200 : 400;

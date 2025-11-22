@@ -5,6 +5,9 @@ import { logger } from "../setup/logger.js";
 export const ERC20_ABI = [
   "function transfer(address to, uint256 amount) returns (bool)",
   "function balanceOf(address owner) view returns (uint256)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function name() view returns (string)",
 ];
 
 /**
@@ -23,11 +26,14 @@ export interface DecodeTransferResult {
 /**
  * Decode and verify ERC20 transfer function call data
  * Returns a result object with validation status and decoded data
+ * 
+ * If expectedReceiver and expectedAmount are provided, validates them.
+ * If not provided, just decodes without validation.
  */
 export function decodeAndVerifyErc20TransferData(
   data: string,
-  expectedReceiver: string,
-  expectedAmount: string
+  expectedReceiver?: string,
+  expectedAmount?: string
 ): DecodeTransferResult {
   try {
     const iface = new Interface(ERC20_ABI);
@@ -41,16 +47,16 @@ export function decodeAndVerifyErc20TransferData(
     const to: string = decoded.args[0];
     const amount: bigint = decoded.args[1];
 
-    // Validate receiver matches expected
-    if (to.toLowerCase() !== expectedReceiver.toLowerCase()) {
+    // Validate receiver matches expected (if provided)
+    if (expectedReceiver && to.toLowerCase() !== expectedReceiver.toLowerCase()) {
       return {
         valid: false,
         reason: `Wrong receiver: expected ${expectedReceiver}, got ${to}`,
       };
     }
 
-    // Validate amount matches expected
-    if (amount.toString() !== expectedAmount) {
+    // Validate amount matches expected (if provided)
+    if (expectedAmount && amount.toString() !== expectedAmount) {
       return {
         valid: false,
         reason: `Wrong amount: expected ${expectedAmount}, got ${amount.toString()}`,
