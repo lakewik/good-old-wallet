@@ -1,6 +1,6 @@
 /**
  * WalletVault - Secure wallet encryption/decryption using Web Crypto API
- * 
+ *
  * This class provides secure storage of seed phrases and private keys using:
  * - PBKDF2 for key derivation (100,000 iterations)
  * - AES-GCM for encryption (provides both encryption and integrity)
@@ -9,8 +9,8 @@
 
 export interface EncryptedVault {
   cipherText: number[]; // The encrypted seed phrase/private key
-  iv: number[];         // Initialization Vector
-  salt: number[];       // Salt used for key derivation
+  iv: number[]; // Initialization Vector
+  salt: number[]; // Salt used for key derivation
 }
 
 export class WalletVault {
@@ -28,14 +28,17 @@ export class WalletVault {
       enc.encode(password),
       "PBKDF2",
       false,
-      ["deriveKey"]
+      ["deriveKey"],
     );
   }
 
   /**
    * KEY DERIVATION: Turn password + salt into an AES Key
    */
-  private async deriveKey(passwordKey: CryptoKey, salt: Uint8Array): Promise<CryptoKey> {
+  private async deriveKey(
+    passwordKey: CryptoKey,
+    salt: Uint8Array,
+  ): Promise<CryptoKey> {
     return window.crypto.subtle.deriveKey(
       {
         name: "PBKDF2",
@@ -46,7 +49,7 @@ export class WalletVault {
       passwordKey,
       { name: "AES-GCM", length: 256 },
       false, // non-extractable: the key cannot be exported to JS context easily
-      ["encrypt", "decrypt"]
+      ["encrypt", "decrypt"],
     );
   }
 
@@ -55,7 +58,10 @@ export class WalletVault {
    * Takes a seed phrase (or private key) and a password.
    * Returns the object to store in chrome.storage.local
    */
-  async encryptWallet(password: string, seedPhrase: string): Promise<EncryptedVault> {
+  async encryptWallet(
+    password: string,
+    seedPhrase: string,
+  ): Promise<EncryptedVault> {
     if (!password || password.length === 0) {
       throw new Error("Password cannot be empty");
     }
@@ -64,7 +70,9 @@ export class WalletVault {
       throw new Error("Seed phrase cannot be empty");
     }
 
-    const salt = window.crypto.getRandomValues(new Uint8Array(this.SALT_LENGTH));
+    const salt = window.crypto.getRandomValues(
+      new Uint8Array(this.SALT_LENGTH),
+    );
     const iv = window.crypto.getRandomValues(new Uint8Array(this.IV_LENGTH));
 
     const passwordKey = await this.getPasswordKey(password);
@@ -77,7 +85,7 @@ export class WalletVault {
       const encryptedBuffer = await window.crypto.subtle.encrypt(
         { name: "AES-GCM", iv: iv },
         aesKey,
-        seedPhraseBuffer
+        seedPhraseBuffer,
       );
 
       // Zero out the raw seed phrase buffer immediately
@@ -91,7 +99,9 @@ export class WalletVault {
     } catch (error) {
       // Ensure cleanup even on error
       seedPhraseBuffer.fill(0);
-      throw new Error(`Encryption failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      throw new Error(
+        `Encryption failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
@@ -102,7 +112,7 @@ export class WalletVault {
   async unlockAndExecute(
     password: string,
     vault: EncryptedVault,
-    action: (decryptedSeedPhrase: Uint8Array) => Promise<void>
+    action: (decryptedSeedPhrase: Uint8Array) => Promise<void>,
   ): Promise<void> {
     if (!password || password.length === 0) {
       throw new Error("Password cannot be empty");
@@ -119,7 +129,7 @@ export class WalletVault {
       const decryptedBuffer = await window.crypto.subtle.decrypt(
         { name: "AES-GCM", iv: iv },
         aesKey,
-        data
+        data,
       );
 
       const sensitiveSeedPhraseArray = new Uint8Array(decryptedBuffer);
@@ -142,7 +152,10 @@ export class WalletVault {
    * WARNING: This creates a string in memory which cannot be wiped.
    * Use unlockAndExecute when possible instead.
    */
-  async decryptWallet(password: string, vault: EncryptedVault): Promise<string> {
+  async decryptWallet(
+    password: string,
+    vault: EncryptedVault,
+  ): Promise<string> {
     let decryptedString = "";
 
     await this.unlockAndExecute(password, vault, async (decryptedBytes) => {
@@ -154,4 +167,3 @@ export class WalletVault {
     return decryptedString;
   }
 }
-

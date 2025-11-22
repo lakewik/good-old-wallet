@@ -6,7 +6,7 @@ import { hasWallet } from "./utils/storage";
 
 function Popup() {
   const [hasExistingWallet, setHasExistingWallet] = useState<boolean | null>(
-    null
+    null,
   );
 
   useEffect(() => {
@@ -56,7 +56,7 @@ function init() {
   root.render(
     <React.StrictMode>
       <Popup />
-    </React.StrictMode>
+    </React.StrictMode>,
   );
 }
 

@@ -28,14 +28,17 @@ export function getEntrypoints(): string[] {
   return allSrcFiles.filter(
     (file) =>
       (file.endsWith(".ts") || file.endsWith(".tsx") || file.endsWith(".js")) &&
-      !file.endsWith(".d.ts")
+      !file.endsWith(".d.ts"),
   );
 }
 
-export async function bundleFile(filePath: string, options: {
-  minify?: boolean;
-  sourcemap?: "inline" | "external" | "none";
-} = {}) {
+export async function bundleFile(
+  filePath: string,
+  options: {
+    minify?: boolean;
+    sourcemap?: "inline" | "external" | "none";
+  } = {},
+) {
   const result = await Bun.build({
     entrypoints: [filePath],
     target: "browser",
@@ -45,7 +48,7 @@ export async function bundleFile(filePath: string, options: {
 
   if (!result.success) {
     throw new Error(
-      `Build failed: ${result.logs.map((log) => log.message).join("\n")}`
+      `Build failed: ${result.logs.map((log) => log.message).join("\n")}`,
     );
   }
 
@@ -56,4 +59,3 @@ export async function bundleFile(filePath: string, options: {
 
   return output;
 }
-

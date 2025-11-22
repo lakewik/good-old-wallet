@@ -24,13 +24,20 @@ export async function saveEncryptedVault(vault: EncryptedVault): Promise<void> {
   };
 
   return new Promise((resolve, reject) => {
-    chrome.storage.local.set({ [STORAGE_KEYS.ENCRYPTED_VAULT]: walletData }, () => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(`Failed to save vault: ${chrome.runtime.lastError.message}`));
-      } else {
-        resolve();
-      }
-    });
+    chrome.storage.local.set(
+      { [STORAGE_KEYS.ENCRYPTED_VAULT]: walletData },
+      () => {
+        if (chrome.runtime.lastError) {
+          reject(
+            new Error(
+              `Failed to save vault: ${chrome.runtime.lastError.message}`,
+            ),
+          );
+        } else {
+          resolve();
+        }
+      },
+    );
   });
 }
 
@@ -41,9 +48,15 @@ export async function getEncryptedVault(): Promise<StoredWalletData | null> {
   return new Promise((resolve, reject) => {
     chrome.storage.local.get([STORAGE_KEYS.ENCRYPTED_VAULT], (result) => {
       if (chrome.runtime.lastError) {
-        reject(new Error(`Failed to retrieve vault: ${chrome.runtime.lastError.message}`));
+        reject(
+          new Error(
+            `Failed to retrieve vault: ${chrome.runtime.lastError.message}`,
+          ),
+        );
       } else {
-        const data = result[STORAGE_KEYS.ENCRYPTED_VAULT] as StoredWalletData | undefined;
+        const data = result[STORAGE_KEYS.ENCRYPTED_VAULT] as
+          | StoredWalletData
+          | undefined;
         resolve(data || null);
       }
     });
@@ -65,11 +78,14 @@ export async function clearWallet(): Promise<void> {
   return new Promise((resolve, reject) => {
     chrome.storage.local.remove([STORAGE_KEYS.ENCRYPTED_VAULT], () => {
       if (chrome.runtime.lastError) {
-        reject(new Error(`Failed to clear wallet: ${chrome.runtime.lastError.message}`));
+        reject(
+          new Error(
+            `Failed to clear wallet: ${chrome.runtime.lastError.message}`,
+          ),
+        );
       } else {
         resolve();
       }
     });
   });
 }
-

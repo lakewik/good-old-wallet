@@ -50,9 +50,7 @@ function TokenCard({ token, onSend }: TokenCardProps) {
           width: "32px",
           height: "32px",
           borderRadius: "50%",
-          background: token.image
-            ? "transparent"
-            : "rgba(255, 255, 255, 0.1)",
+          background: token.image ? "transparent" : "rgba(255, 255, 255, 0.1)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -193,7 +191,8 @@ export default function PortfolioScreen({
   encryptedVault,
 }: PortfolioScreenProps) {
   const [address, setAddress] = useState<string>("");
-  const [totalPortfolioValue, setTotalPortfolioValue] = useState<string>("$0.00");
+  const [totalPortfolioValue, setTotalPortfolioValue] =
+    useState<string>("$0.00");
   const [tokens, setTokens] = useState<Token[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -205,70 +204,74 @@ export default function PortfolioScreen({
   const loadWalletData = async () => {
     try {
       const vault = new WalletVault();
-      await vault.unlockAndExecute(password, encryptedVault, async (seedPhraseBytes) => {
-        const decoder = new TextDecoder();
-        const seedPhrase = decoder.decode(seedPhraseBytes);
+      await vault.unlockAndExecute(
+        password,
+        encryptedVault,
+        async (seedPhraseBytes) => {
+          const decoder = new TextDecoder();
+          const seedPhrase = decoder.decode(seedPhraseBytes);
 
-        // Derive wallet address
-        const { ethers } = await import("ethers");
-        const wallet = ethers.Wallet.fromPhrase(seedPhrase);
-        setAddress(wallet.address);
+          // Derive wallet address
+          const { ethers } = await import("ethers");
+          const wallet = ethers.Wallet.fromPhrase(seedPhrase);
+          setAddress(wallet.address);
 
-        // TODO: Fetch portfolio value and tokens from blockchain
-        // For now, using placeholder data
-        setTotalPortfolioValue("$12,345.67");
-        setTokens([
-          {
-            image: "",
-            name: "Ethereum",
-            symbol: "ETH",
-            amount: "2.5",
-            valueUSD: "$6,234.50",
-          },
-          {
-            image: "",
-            name: "USD Coin",
-            symbol: "USDC",
-            amount: "5,000.00",
-            valueUSD: "$5,000.00",
-          },
-          {
-            image: "",
-            name: "Wrapped Ethereum",
-            symbol: "WETH",
-            amount: "1.0",
-            valueUSD: "$2,491.80",
-          },
-          {
-            image: "",
-            name: "Dai Stablecoin",
-            symbol: "DAI",
-            amount: "1,000.00",
-            valueUSD: "$1,000.00",
-          },
-          {
-            image: "",
-            name: "Chainlink",
-            symbol: "LINK",
-            amount: "50.0",
-            valueUSD: "$750.00",
-          },
-          {
-            image: "",
-            name: "Uniswap",
-            symbol: "UNI",
-            amount: "100.0",
-            valueUSD: "$500.00",
-          },
-          {
-            image: "",
-            name: "Aave Token",
-            symbol: "AAVE",
-            amount: "5.0",
-            valueUSD: "$370.37",
-          },
-        ]);
-      });
+          // TODO: Fetch portfolio value and tokens from blockchain
+          // For now, using placeholder data
+          setTotalPortfolioValue("$12,345.67");
+          setTokens([
+            {
+              image: "",
+              name: "Ethereum",
+              symbol: "ETH",
+              amount: "2.5",
+              valueUSD: "$6,234.50",
+            },
+            {
+              image: "",
+              name: "USD Coin",
+              symbol: "USDC",
+              amount: "5,000.00",
+              valueUSD: "$5,000.00",
+            },
+            {
+              image: "",
+              name: "Wrapped Ethereum",
+              symbol: "WETH",
+              amount: "1.0",
+              valueUSD: "$2,491.80",
+            },
+            {
+              image: "",
+              name: "Dai Stablecoin",
+              symbol: "DAI",
+              amount: "1,000.00",
+              valueUSD: "$1,000.00",
+            },
+            {
+              image: "",
+              name: "Chainlink",
+              symbol: "LINK",
+              amount: "50.0",
+              valueUSD: "$750.00",
+            },
+            {
+              image: "",
+              name: "Uniswap",
+              symbol: "UNI",
+              amount: "100.0",
+              valueUSD: "$500.00",
+            },
+            {
+              image: "",
+              name: "Aave Token",
+              symbol: "AAVE",
+              amount: "5.0",
+              valueUSD: "$370.37",
+            },
+          ]);
+        },
+      );
     } catch (error) {
       console.error("Error loading wallet data:", error);
     } finally {
@@ -349,166 +352,51 @@ export default function PortfolioScreen({
         }}
       >
         <div style={{ width: "44px", height: "44px", flexShrink: 0 }}>
-            <img
-              src={LOGO_PATH}
-              alt={LOGO_ALT}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-                opacity: 0.7,
-              }}
-            />
-          </div>
-          <div
+          <img
+            src={LOGO_PATH}
+            alt={LOGO_ALT}
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--spacing-sm)",
-              flex: 1,
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+              opacity: 0.7,
             }}
-          >
-            <span
-              style={{
-                fontFamily: "var(--font-family-mono)",
-                fontSize: "12px",
-                color: "var(--text-primary)",
-              }}
-            >
-              {formatAddress(address)}
-            </span>
-            <button
-              onClick={copyAddress}
-              style={{
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                padding: "4px",
-                display: "flex",
-                alignItems: "center",
-                color: copied ? "#44ff44" : "var(--text-muted)",
-                transition: "color var(--transition-fast)",
-              }}
-              title={copied ? "Copied!" : "Copy address"}
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                {copied ? (
-                  <>
-                    <path d="M20 6L9 17l-5-5" />
-                  </>
-                ) : (
-                  <>
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                  </>
-                )}
-              </svg>
-            </button>
-          </div>
+          />
         </div>
-
-        {/* Scrollable Content */}
         <div
           style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--spacing-sm)",
             flex: 1,
-            overflowY: "auto",
-            width: "100%",
-            scrollbarWidth: "none", // Firefox
-            msOverflowStyle: "none", // IE/Edge
-          }}
-          className="hide-scrollbar"
-        >
-          <div
-            style={{
-              width: "100%",
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--spacing-sm)",
-              padding: "var(--spacing-sm)",
-            }}
-          >
-
-        {/* Total Portfolio Value */}
-        <div
-          style={{
-            width: "100%",
-            textAlign: "center",
-            padding: "var(--spacing-md) var(--spacing-xs)",
-            background: "rgba(255, 255, 255, 0.02)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
-            borderRadius: "var(--border-radius)",
           }}
         >
-          <div
+          <span
             style={{
-              fontSize: "10px",
-              color: "var(--text-muted)",
-              textTransform: "uppercase",
-              letterSpacing: "1px",
-              marginBottom: "var(--spacing-xs)",
-            }}
-          >
-            Total Portfolio Value
-          </div>
-          <div
-            style={{
-              fontSize: "24px",
-              fontWeight: 600,
+              fontFamily: "var(--font-family-mono)",
+              fontSize: "12px",
               color: "var(--text-primary)",
-              fontFamily: "var(--font-family-sans)",
             }}
           >
-            {totalPortfolioValue}
-          </div>
-        </div>
-
-        {/* Send Button */}
-        <div style={{ width: "100%" }}>
+            {formatAddress(address)}
+          </span>
           <button
-            onClick={handleSend}
+            onClick={copyAddress}
             style={{
-              width: "100%",
-              padding: "var(--spacing-md) var(--spacing-lg)",
-              border: "1px solid var(--border-primary)",
-              borderRadius: "var(--border-radius)",
-              fontFamily: "var(--font-family-sans)",
-              fontSize: "10px",
-              fontWeight: 600,
+              background: "transparent",
+              border: "none",
               cursor: "pointer",
-              letterSpacing: "0.5px",
-              textTransform: "uppercase",
-              position: "relative",
-              color: "var(--text-primary)",
-              borderColor: "var(--border-focus)",
-              background: "var(--bg-button-primary)",
+              padding: "4px",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              gap: "var(--spacing-xs)",
-              transition: "all var(--transition-fast)",
+              color: copied ? "#44ff44" : "var(--text-muted)",
+              transition: "color var(--transition-fast)",
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.35)";
-              e.currentTarget.style.background = "var(--bg-button-primary-hover)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "var(--border-focus)";
-              e.currentTarget.style.background = "var(--bg-button-primary)";
-            }}
+            title={copied ? "Copied!" : "Copy address"}
           >
-            <span>Send</span>
             <svg
-              width="12"
-              height="12"
+              width="14"
+              height="14"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -516,55 +404,169 @@ export default function PortfolioScreen({
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <path d="M9 18l6-6-6-6" />
+              {copied ? (
+                <>
+                  <path d="M20 6L9 17l-5-5" />
+                </>
+              ) : (
+                <>
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </>
+              )}
             </svg>
           </button>
         </div>
+      </div>
 
-        {/* Tokens List */}
+      {/* Scrollable Content */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          width: "100%",
+          scrollbarWidth: "none", // Firefox
+          msOverflowStyle: "none", // IE/Edge
+        }}
+        className="hide-scrollbar"
+      >
         <div
           style={{
             width: "100%",
             display: "flex",
             flexDirection: "column",
             gap: "var(--spacing-sm)",
+            padding: "var(--spacing-sm)",
           }}
         >
+          {/* Total Portfolio Value */}
           <div
             style={{
-              fontSize: "10px",
-              color: "var(--text-muted)",
-              textTransform: "uppercase",
-              letterSpacing: "1px",
-              marginBottom: "var(--spacing-xs)",
+              width: "100%",
+              textAlign: "center",
+              padding: "var(--spacing-md) var(--spacing-xs)",
+              background: "rgba(255, 255, 255, 0.02)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderRadius: "var(--border-radius)",
             }}
           >
-            Tokens
-          </div>
-          {tokens.length === 0 ? (
             <div
               style={{
-                padding: "var(--spacing-lg)",
-                textAlign: "center",
+                fontSize: "10px",
                 color: "var(--text-muted)",
-                fontSize: "11px",
+                textTransform: "uppercase",
+                letterSpacing: "1px",
+                marginBottom: "var(--spacing-xs)",
               }}
             >
-              No tokens found
+              Total Portfolio Value
             </div>
-          ) : (
-            tokens.map((token, index) => (
-              <TokenCard
-                key={index}
-                token={token}
-                onSend={() => handleTokenSend(token)}
-              />
-            ))
-          )}
-        </div>
+            <div
+              style={{
+                fontSize: "24px",
+                fontWeight: 600,
+                color: "var(--text-primary)",
+                fontFamily: "var(--font-family-sans)",
+              }}
+            >
+              {totalPortfolioValue}
+            </div>
+          </div>
+
+          {/* Send Button */}
+          <div style={{ width: "100%" }}>
+            <button
+              onClick={handleSend}
+              style={{
+                width: "100%",
+                padding: "var(--spacing-md) var(--spacing-lg)",
+                border: "1px solid var(--border-primary)",
+                borderRadius: "var(--border-radius)",
+                fontFamily: "var(--font-family-sans)",
+                fontSize: "10px",
+                fontWeight: 600,
+                cursor: "pointer",
+                letterSpacing: "0.5px",
+                textTransform: "uppercase",
+                position: "relative",
+                color: "var(--text-primary)",
+                borderColor: "var(--border-focus)",
+                background: "var(--bg-button-primary)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "var(--spacing-xs)",
+                transition: "all var(--transition-fast)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.35)";
+                e.currentTarget.style.background =
+                  "var(--bg-button-primary-hover)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "var(--border-focus)";
+                e.currentTarget.style.background = "var(--bg-button-primary)";
+              }}
+            >
+              <span>Send</span>
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Tokens List */}
+          <div
+            style={{
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--spacing-sm)",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "10px",
+                color: "var(--text-muted)",
+                textTransform: "uppercase",
+                letterSpacing: "1px",
+                marginBottom: "var(--spacing-xs)",
+              }}
+            >
+              Tokens
+            </div>
+            {tokens.length === 0 ? (
+              <div
+                style={{
+                  padding: "var(--spacing-lg)",
+                  textAlign: "center",
+                  color: "var(--text-muted)",
+                  fontSize: "11px",
+                }}
+              >
+                No tokens found
+              </div>
+            ) : (
+              tokens.map((token, index) => (
+                <TokenCard
+                  key={index}
+                  token={token}
+                  onSend={() => handleTokenSend(token)}
+                />
+              ))
+            )}
           </div>
         </div>
+      </div>
     </div>
   );
 }
-

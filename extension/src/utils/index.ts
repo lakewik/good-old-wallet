@@ -6,4 +6,3 @@ export {
   clearWallet,
   type StoredWalletData,
 } from "./storage";
-

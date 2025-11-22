@@ -5,8 +5,9 @@ This document explains how to verify that your wallet can successfully sign Ethe
 ## ✅ Comprehensive Test (Recommended)
 
 The `test-ethereum-signing.ts` script tests the **entire flow**:
+
 1. ✅ Encrypts seed phrase
-2. ✅ Decrypts seed phrase  
+2. ✅ Decrypts seed phrase
 3. ✅ Derives Ethereum private key from seed phrase
 4. ✅ Signs a test message
 5. ✅ Verifies the signature
@@ -26,6 +27,7 @@ bun tools/test-ethereum-signing.ts "word1 word2 word3 word4 word5 word6 word7 wo
 ### Expected Output
 
 You should see:
+
 - ✅ Encryption successful
 - ✅ Decryption successful (matches original)
 - ✅ Ethereum key derived successfully (with address)
@@ -67,6 +69,7 @@ bun tools/test-ethereum-signing.ts "your seed phrase" "your password"
 ```
 
 This will verify that:
+
 - The seed phrase can be encrypted/decrypted
 - An Ethereum private key can be derived
 - Transactions can be signed
@@ -77,15 +80,18 @@ This will verify that:
 ## 🎯 What Gets Tested
 
 ### Encryption/Decryption
+
 - Uses PBKDF2 with 100,000 iterations
 - Uses AES-GCM for encryption
 - Memory wiping after use
 
 ### Key Derivation
+
 - Derives Ethereum private key from BIP39 mnemonic
 - Uses standard Ethereum derivation path (m/44'/60'/0'/0/0)
 
 ### Transaction Signing
+
 - Signs a test message using EIP-191 standard
 - Verifies signature can be recovered
 - Confirms recovered address matches original
@@ -111,4 +117,3 @@ Your wallet is ready for production if:
 4. ✅ Same seed phrase + password produces same Ethereum address
 
 If all criteria are met, **you can sign Ethereum transactions with 100% confidence**.
-

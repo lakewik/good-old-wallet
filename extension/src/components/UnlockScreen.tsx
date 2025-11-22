@@ -4,7 +4,13 @@ import Title from "./Title";
 import Input from "./Input";
 import Button from "./Button";
 import { PageContainer, ContentContainer, ButtonGroup } from "./Container";
-import { APP_NAME, LOGO_PATH, LOGO_ALT, PASSWORD_LABEL, PASSWORD_PLACEHOLDER } from "../constants";
+import {
+  APP_NAME,
+  LOGO_PATH,
+  LOGO_ALT,
+  PASSWORD_LABEL,
+  PASSWORD_PLACEHOLDER,
+} from "../constants";
 import { WalletVault } from "../utils/WalletVault";
 import { getEncryptedVault } from "../utils/storage";
 import SuccessScreen from "./SuccessScreen";
@@ -14,7 +20,9 @@ export default function UnlockScreen() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [encryptedVault, setEncryptedVault] = useState<EncryptedVault | null>(null);
+  const [encryptedVault, setEncryptedVault] = useState<EncryptedVault | null>(
+    null,
+  );
 
   const handleUnlock = async () => {
     setError(null);
@@ -35,7 +43,7 @@ export default function UnlockScreen() {
       }
 
       const vault = new WalletVault();
-      
+
       // Test decryption by trying to unlock
       await vault.unlockAndExecute(password, storedData.vault, async () => {
         // If we get here, decryption succeeded
@@ -54,7 +62,9 @@ export default function UnlockScreen() {
 
   // Show success screen if unlocked
   if (encryptedVault) {
-    return <SuccessScreen encryptedVault={encryptedVault} password={password} />;
+    return (
+      <SuccessScreen encryptedVault={encryptedVault} password={password} />
+    );
   }
 
   return (
@@ -96,4 +106,3 @@ export default function UnlockScreen() {
     </PageContainer>
   );
 }
-

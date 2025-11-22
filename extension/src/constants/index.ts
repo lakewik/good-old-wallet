@@ -13,4 +13,3 @@ export const BUTTON_LABELS = {
   IMPORT_SEED_PHRASE: "Import Seed Phrase",
   GENERATE_NEW_SEED_PHRASE: "Generate New Seed Phrase",
 } as const;
-

@@ -6,10 +6,5 @@ interface TitleProps {
 }
 
 export default function Title({ children, className = "" }: TitleProps) {
-  return (
-    <h1 className={`wallet-title ${className}`.trim()}>
-      {children}
-    </h1>
-  );
+  return <h1 className={`wallet-title ${className}`.trim()}>{children}</h1>;
 }
-

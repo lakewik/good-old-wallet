@@ -1,6 +1,6 @@
 /**
  * REFERENCE: Test signing code
- * 
+ *
  * This code was used to test transaction signing functionality.
  * Kept for reference purposes.
  */
@@ -10,7 +10,7 @@ import type { EncryptedVault } from "./WalletVault";
 
 export async function testSigningReference(
   password: string,
-  encryptedVault: EncryptedVault
+  encryptedVault: EncryptedVault,
 ): Promise<{
   address: string;
   signature: string;
@@ -28,25 +28,29 @@ export async function testSigningReference(
       verified: boolean;
     } | null = null;
 
-    await vault.unlockAndExecute(password, encryptedVault, async (seedPhraseBytes) => {
-      const decoder = new TextDecoder();
-      const seedPhrase = decoder.decode(seedPhraseBytes);
+    await vault.unlockAndExecute(
+      password,
+      encryptedVault,
+      async (seedPhraseBytes) => {
+        const decoder = new TextDecoder();
+        const seedPhrase = decoder.decode(seedPhraseBytes);
 
-      // Dynamically import ethers (only in browser)
-      const { ethers } = await import("ethers");
-      const wallet = ethers.Wallet.fromPhrase(seedPhrase);
-      const signature = await wallet.signMessage(testMessage);
-      const recoveredAddress = ethers.verifyMessage(testMessage, signature);
-      const verified =
-        recoveredAddress.toLowerCase() === wallet.address.toLowerCase();
+        // Dynamically import ethers (only in browser)
+        const { ethers } = await import("ethers");
+        const wallet = ethers.Wallet.fromPhrase(seedPhrase);
+        const signature = await wallet.signMessage(testMessage);
+        const recoveredAddress = ethers.verifyMessage(testMessage, signature);
+        const verified =
+          recoveredAddress.toLowerCase() === wallet.address.toLowerCase();
 
-      result = {
-        address: wallet.address,
-        signature,
-        message: testMessage,
-        verified,
-      };
-    });
+        result = {
+          address: wallet.address,
+          signature,
+          message: testMessage,
+          verified,
+        };
+      },
+    );
 
     return result;
   } catch (error) {
@@ -54,4 +58,3 @@ export async function testSigningReference(
     return null;
   }
 }
-

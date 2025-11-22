@@ -35,13 +35,13 @@ class WalletVault {
       enc.encode(password),
       "PBKDF2",
       false,
-      ["deriveKey"]
+      ["deriveKey"],
     );
   }
 
   private async deriveKey(
     passwordKey: CryptoKey,
-    salt: Uint8Array
+    salt: Uint8Array,
   ): Promise<CryptoKey> {
     return crypto.subtle.deriveKey(
       {
@@ -53,13 +53,13 @@ class WalletVault {
       passwordKey,
       { name: "AES-GCM", length: 256 },
       false,
-      ["encrypt", "decrypt"]
+      ["encrypt", "decrypt"],
     );
   }
 
   async encryptWallet(
     password: string,
-    seedPhrase: string
+    seedPhrase: string,
   ): Promise<EncryptedVault> {
     const salt = crypto.getRandomValues(new Uint8Array(this.SALT_LENGTH));
     const iv = crypto.getRandomValues(new Uint8Array(this.IV_LENGTH));
@@ -73,7 +73,7 @@ class WalletVault {
     const encryptedBuffer = await crypto.subtle.encrypt(
       { name: "AES-GCM", iv: iv },
       aesKey,
-      seedPhraseBuffer
+      seedPhraseBuffer,
     );
 
     seedPhraseBuffer.fill(0);
@@ -87,7 +87,7 @@ class WalletVault {
 
   async decryptWallet(
     password: string,
-    vault: EncryptedVault
+    vault: EncryptedVault,
   ): Promise<string> {
     const salt = new Uint8Array(vault.salt);
     const iv = new Uint8Array(vault.iv);
@@ -99,7 +99,7 @@ class WalletVault {
     const decryptedBuffer = await crypto.subtle.decrypt(
       { name: "AES-GCM", iv: iv },
       aesKey,
-      data
+      data,
     );
 
     const decoder = new TextDecoder();
@@ -118,11 +118,11 @@ async function main() {
 
   if (!seedPhrase || !password) {
     console.error(
-      'Usage: bun tools/test-ethereum-signing.ts "seed phrase" "password"'
+      'Usage: bun tools/test-ethereum-signing.ts "seed phrase" "password"',
     );
     console.error("\nExample:");
     console.error(
-      '  bun tools/test-ethereum-signing.ts "word1 word2 word3..." "mypassword123"'
+      '  bun tools/test-ethereum-signing.ts "word1 word2 word3..." "mypassword123"',
     );
     process.exit(1);
   }
@@ -141,12 +141,12 @@ async function main() {
   const decrypted = await vault.decryptWallet(password, encrypted);
   console.log("✅ Seed phrase decrypted successfully");
   console.log(
-    `   Decrypted: ${decrypted === seedPhrase.trim() ? "✅ MATCHES" : "❌ MISMATCH"}`
+    `   Decrypted: ${decrypted === seedPhrase.trim() ? "✅ MATCHES" : "❌ MISMATCH"}`,
   );
 
   if (decrypted !== seedPhrase.trim()) {
     console.error(
-      "\n❌ CRITICAL: Decrypted seed phrase doesn't match original!"
+      "\n❌ CRITICAL: Decrypted seed phrase doesn't match original!",
     );
     process.exit(1);
   }
@@ -167,7 +167,7 @@ async function main() {
     console.log("✅ Ethereum key derived successfully");
     console.log(`   Address: ${address}`);
     console.log(
-      `   Private Key: ${privateKey.substring(0, 10)}...${privateKey.substring(privateKey.length - 8)}`
+      `   Private Key: ${privateKey.substring(0, 10)}...${privateKey.substring(privateKey.length - 8)}`,
     );
 
     console.log("\n✍️  Step 4: Signing test transaction...");
@@ -179,7 +179,7 @@ async function main() {
     console.log("✅ Transaction signed successfully");
     console.log(`   Message: "${testMessage}"`);
     console.log(
-      `   Signature: ${signature.substring(0, 20)}...${signature.substring(signature.length - 20)}`
+      `   Signature: ${signature.substring(0, 20)}...${signature.substring(signature.length - 20)}`,
     );
 
     console.log("\n✅ Step 5: Verifying signature...");
@@ -207,7 +207,7 @@ async function main() {
     console.log("✅ Transaction Signing: Working");
     console.log("✅ Signature Verification: Working");
     console.log(
-      "\n💯 You can now sign Ethereum transactions with confidence!\n"
+      "\n💯 You can now sign Ethereum transactions with confidence!\n",
     );
   } catch (error: any) {
     if (

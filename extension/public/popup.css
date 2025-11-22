@@ -87,7 +87,9 @@ body.dev-mode {
   transform: translate(-50%, -50%);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3), 0 0 20px rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.3),
+    0 0 20px rgba(255, 255, 255, 0.15);
 }
 
 #root {

@@ -29,7 +29,7 @@ export default function LandingScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [encryptedVault, setEncryptedVault] = useState<EncryptedVault | null>(
-    null
+    null,
   );
   const [savedPassword, setSavedPassword] = useState<string>("");
 

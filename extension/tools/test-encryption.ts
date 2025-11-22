@@ -2,7 +2,7 @@
 
 /**
  * Test script to encrypt/decrypt seed phrases using the same algorithm as the wallet
- * 
+ *
  * Usage:
  *   bun tools/test-encryption.ts encrypt "your seed phrase" "your password"
  *   bun tools/test-encryption.ts decrypt <salt-hex> <iv-hex> <ciphertext-hex> "your password"
@@ -26,13 +26,13 @@ class WalletVault {
       enc.encode(password),
       "PBKDF2",
       false,
-      ["deriveKey"]
+      ["deriveKey"],
     );
   }
 
   private async deriveKey(
     passwordKey: CryptoKey,
-    salt: Uint8Array
+    salt: Uint8Array,
   ): Promise<CryptoKey> {
     return crypto.subtle.deriveKey(
       {
@@ -44,13 +44,13 @@ class WalletVault {
       passwordKey,
       { name: "AES-GCM", length: 256 },
       false,
-      ["encrypt", "decrypt"]
+      ["encrypt", "decrypt"],
     );
   }
 
   async encryptWallet(
     password: string,
-    seedPhrase: string
+    seedPhrase: string,
   ): Promise<EncryptedVault> {
     if (!password || password.length === 0) {
       throw new Error("Password cannot be empty");
@@ -73,7 +73,7 @@ class WalletVault {
       const encryptedBuffer = await crypto.subtle.encrypt(
         { name: "AES-GCM", iv: iv },
         aesKey,
-        seedPhraseBuffer
+        seedPhraseBuffer,
       );
 
       seedPhraseBuffer.fill(0);
@@ -86,14 +86,14 @@ class WalletVault {
     } catch (error) {
       seedPhraseBuffer.fill(0);
       throw new Error(
-        `Encryption failed: ${error instanceof Error ? error.message : "Unknown error"}`
+        `Encryption failed: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
   }
 
   async decryptWallet(
     password: string,
-    vault: EncryptedVault
+    vault: EncryptedVault,
   ): Promise<string> {
     if (!password || password.length === 0) {
       throw new Error("Password cannot be empty");
@@ -110,7 +110,7 @@ class WalletVault {
       const decryptedBuffer = await crypto.subtle.decrypt(
         { name: "AES-GCM", iv: iv },
         aesKey,
-        data
+        data,
       );
 
       const decoder = new TextDecoder();
@@ -152,7 +152,9 @@ async function main() {
     const password = args[2];
 
     if (!seedPhrase || !password) {
-      console.error("Usage: bun tools/test-encryption.ts encrypt <seed-phrase> <password>");
+      console.error(
+        "Usage: bun tools/test-encryption.ts encrypt <seed-phrase> <password>",
+      );
       process.exit(1);
     }
 
@@ -168,7 +170,10 @@ async function main() {
       console.log(`Cipher:  ${bytesToHex(encrypted.cipherText)}`);
       console.log("\nCopy these values to compare with the app output.\n");
     } catch (error) {
-      console.error("❌ Encryption failed:", error instanceof Error ? error.message : error);
+      console.error(
+        "❌ Encryption failed:",
+        error instanceof Error ? error.message : error,
+      );
       process.exit(1);
     }
   } else if (command === "decrypt") {
@@ -179,7 +184,7 @@ async function main() {
 
     if (!saltHex || !ivHex || !cipherHex || !password) {
       console.error(
-        "Usage: bun tools/test-encryption.ts decrypt <salt-hex> <iv-hex> <ciphertext-hex> <password>"
+        "Usage: bun tools/test-encryption.ts decrypt <salt-hex> <iv-hex> <ciphertext-hex> <password>",
       );
       process.exit(1);
     }
@@ -198,9 +203,14 @@ async function main() {
       console.log("Decrypted Seed Phrase:");
       console.log("======================");
       console.log(decrypted);
-      console.log("\n✅ The encrypted data matches! Your wallet encryption is working correctly.\n");
+      console.log(
+        "\n✅ The encrypted data matches! Your wallet encryption is working correctly.\n",
+      );
     } catch (error) {
-      console.error("❌ Decryption failed:", error instanceof Error ? error.message : error);
+      console.error(
+        "❌ Decryption failed:",
+        error instanceof Error ? error.message : error,
+      );
       console.error("\nThis could mean:");
       console.error("  - Wrong password");
       console.error("  - Corrupted vault data");
@@ -211,14 +221,16 @@ async function main() {
     console.log("Wallet Encryption Test Tool");
     console.log("==========================\n");
     console.log("Encrypt a seed phrase:");
-    console.log('  bun tools/test-encryption.ts encrypt "your seed phrase" "your password"\n');
+    console.log(
+      '  bun tools/test-encryption.ts encrypt "your seed phrase" "your password"\n',
+    );
     console.log("Decrypt vault data (from app):");
     console.log(
-      '  bun tools/test-encryption.ts decrypt <salt> <iv> <ciphertext> "your password"\n'
+      '  bun tools/test-encryption.ts decrypt <salt> <iv> <ciphertext> "your password"\n',
     );
     console.log("Example:");
     console.log(
-      '  bun tools/test-encryption.ts encrypt "word1 word2 word3..." "mypassword123"\n'
+      '  bun tools/test-encryption.ts encrypt "word1 word2 word3..." "mypassword123"\n',
     );
   }
 }
@@ -227,4 +239,3 @@ main().catch((error) => {
   console.error("Fatal error:", error);
   process.exit(1);
 });
-

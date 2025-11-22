@@ -175,7 +175,7 @@ try {
     console.error(`❌ Port ${PORT} is already in use.`);
     console.log(`💡 Try: PORT=3001 bun run dev:server`);
     console.log(
-      `💡 Or kill the process using port ${PORT}: lsof -ti:${PORT} | xargs kill -9`
+      `💡 Or kill the process using port ${PORT}: lsof -ti:${PORT} | xargs kill -9`,
     );
     process.exit(1);
   }

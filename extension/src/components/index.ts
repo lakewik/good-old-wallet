@@ -7,5 +7,9 @@ export { default as LandingScreen } from "./LandingScreen";
 export { default as SuccessScreen } from "./SuccessScreen";
 export { default as UnlockScreen } from "./UnlockScreen";
 export { default as PortfolioScreen } from "./PortfolioScreen";
-export { PageContainer, ContentContainer, ButtonGroup, InputGroup } from "./Container";
-
+export {
+  PageContainer,
+  ContentContainer,
+  ButtonGroup,
+  InputGroup,
+} from "./Container";
