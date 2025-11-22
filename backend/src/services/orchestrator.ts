@@ -60,15 +60,16 @@ export async function selectBestSingleChainForUsdcSend(
 
       logger.info("Chain candidate found", {
         chainId: chainIdNum,
+        chainName: cfg.name,
+        estimatedGas: gas.toString(),
+        gasPrice: gasPrice.toString(),
         gasCostUsdc: gasCostUsdc.toString(),
       });
 
       candidates.push({ chainId: chainIdNum, gasCostUsdc });
     } catch (error) {
-      logger.warn("Failed to estimate gas for chain", {
-        chainId: chainIdNum,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      // Gas estimation failed - already logged in gas.ts, just note we're skipping
+      // No need to log again to avoid duplication
       continue;
     }
   }
@@ -160,8 +161,11 @@ export async function buildMultiChainUsdcPlan(
 
       logger.info("Chain added to multi-chain plan", {
         chainId: chainIdNum,
+        chainName: cfg.name,
         balance: balance.toString(),
         maxSpendable: maxSpendable.toString(),
+        estimatedGas: gas.toString(),
+        gasPrice: gasPrice.toString(),
         gasCostUsdc: gasCostUsdc.toString(),
       });
 
@@ -172,10 +176,8 @@ export async function buildMultiChainUsdcPlan(
         gasCostUsdc,
       });
     } catch (error) {
-      logger.warn("Failed to estimate gas for chain in multi-chain plan", {
-        chainId: chainIdNum,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      // Gas estimation failed - already logged in gas.ts, just skip this chain
+      // No need to log again to avoid duplication
       continue;
     }
   }
