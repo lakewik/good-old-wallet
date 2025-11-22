@@ -93,11 +93,11 @@ function readRequestBody(req: http.IncomingMessage): Promise<string> {
 }
 
 /**
- * POST /plan
+ * POST /plan-sending-transaction
  * Accepts source address, destination address, amount, and token name
  * Returns the planning result for sending USDC
  */
-export async function handlePlanRequest(
+export async function handlePlanSendingTransactionRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse
 ): Promise<void> {

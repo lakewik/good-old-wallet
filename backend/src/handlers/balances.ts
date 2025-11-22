@@ -34,7 +34,22 @@ type BalanceStorage = Record<
 >;
 
 // In-memory balance storage (will be populated from external API)
-let balanceStorage: BalanceStorage = {};
+let balanceStorage: BalanceStorage = {
+  // Ethereum (ChainId 1)
+  [ChainId.ETHEREUM]: {
+    "0x13190e7028c5e7e70f87efe08a973c330b09f458": {
+      [NATIVE_TOKEN_ADDRESS]: "3500000000000000000", // 3.5 ETH
+      "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48": "250000000", // 250 USDC
+    },
+  },
+  // Base (ChainId 8453)
+  [ChainId.BASE]: {
+    "0x13190e7028c5e7e70f87efe08a973c330b09f458": {
+      [NATIVE_TOKEN_ADDRESS]: "1800000000000000000", // 1.8 ETH
+      "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913": "150000000", // 150 USDC
+    },
+  },
+};
 
 /**
  * Update balances from a JSON object
