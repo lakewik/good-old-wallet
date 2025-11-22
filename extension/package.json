@@ -1,0 +1,25 @@
+{
+  "name": "good-old-wallet",
+  "type": "module",
+  "scripts": {
+    "build": "bun tools/build.ts",
+    "dev": "bun tools/build.ts --watch",
+    "dev:server": "bun --hot tools/dev.ts",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@trivago/prettier-plugin-sort-imports": "^6.0.0",
+    "@types/chrome": "^0.1.31",
+    "@types/react": "^19.2.6",
+    "@types/react-dom": "^19.2.3",
+    "bun-types": "latest",
+    "prettier": "^3.6.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
