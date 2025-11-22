@@ -153,62 +153,88 @@ export async function buildMultiChainUsdcPlan(
     gasCostUsdc: bigint;  // for "one transfer tx"
   };
 
-  const perChain: ChainInfo[] = [];
+  // Step 1: Quick balance check - collect balances WITHOUT gas estimation
+  // This allows fast rejection if total balance is insufficient
+  logger.debug("Quick balance check across all chains");
+  const quickBalanceCheck: Array<{ chainId: ChainId; balance: bigint; maxSpendable: bigint }> = [];
+  let quickTotalAvailable = 0n;
 
-  // 1. Collect per-chain info
-  logger.debug("Collecting per-chain information");
-  // Only iterate over chains that are actually configured in CHAINS
   for (const [chainIdStr, cfg] of Object.entries(CHAINS)) {
     const chainIdNum = Number(chainIdStr) as ChainId;
-    logger.debug("Processing chain for multi-chain plan", {
-      chainId: chainIdNum,
-      chainName: cfg.name,
-    });
     const usdc = cfg.commonTokens.USDC;
     if (!usdc) {
-      logger.debug("Chain has no USDC token configured", { chainId: chainIdNum });
       continue;
     }
 
     const balance = getErc20Balance(chainIdNum, usdc, fromWallet);
     if (balance === 0n) {
-      logger.debug("Zero balance on chain, skipping", { chainId: chainIdNum });
       continue;
     }
 
-    // optional: keep small USDC buffer for future gas swaps, etc.
-    const buffer = BigInt(0); // or e.g. 5 * 10^usdc.decimals
+    const buffer = BigInt(0);
     const maxSpendable = balance > buffer ? balance - buffer : 0n;
     if (maxSpendable === 0n) {
-      const balanceFormatted = formatAmount(balance, 6);
-      logger.debug("No spendable balance after buffer", {
-        chainId: chainIdNum,
-        balance: balance.toString(),
-        balanceFormatted,
-        buffer: buffer.toString(),
-      });
       continue;
     }
+
+    quickBalanceCheck.push({
+      chainId: chainIdNum,
+      balance,
+      maxSpendable,
+    });
+    quickTotalAvailable += maxSpendable;
+  }
+
+  // Fast rejection: if total balance is insufficient, return immediately
+  if (quickTotalAvailable < amountUsdc) {
+    const quickTotalFormatted = formatAmount(quickTotalAvailable, 6);
+    logger.warn("Insufficient total balance across all chains (quick check)", {
+      totalAvailable: quickTotalAvailable.toString(),
+      totalAvailableFormatted: quickTotalFormatted,
+      required: amountUsdc.toString(),
+      requiredFormatted: amountUsdcFormatted,
+    });
+    return null; // Return immediately without gas estimation
+  }
+
+  logger.info("Sufficient balance found, proceeding with gas estimation", {
+    totalAvailable: quickTotalAvailable.toString(),
+    totalAvailableFormatted: formatAmount(quickTotalAvailable, 6),
+    chainsWithBalance: quickBalanceCheck.length,
+  });
+
+  // Step 2: Now estimate gas only for chains with sufficient balance
+  const perChain: ChainInfo[] = [];
+
+  for (const chainBalance of quickBalanceCheck) {
+    const chainIdNum = chainBalance.chainId;
+    const cfg = CHAINS[chainIdNum];
+    
+    logger.debug("Estimating gas for chain", {
+      chainId: chainIdNum,
+      chainName: cfg.name,
+      maxSpendable: chainBalance.maxSpendable.toString(),
+    });
 
     try {
       const { gas, gasPrice } = await estimateUsdcTransferGas(
         chainIdNum,
         fromWallet,
         toWallet,
-        maxSpendable,
+        chainBalance.maxSpendable,
       );
       const nativeCost = gas * gasPrice;
       const gasCostUsdc = await gasCostInUsdc(chainIdNum, nativeCost);
-      const balanceFormatted = formatAmount(balance, 6);
-      const maxSpendableFormatted = formatAmount(maxSpendable, 6);
+      const balanceFormatted = formatAmount(chainBalance.balance, 6);
+      const maxSpendableFormatted = formatAmount(chainBalance.maxSpendable, 6);
       const gasCostUsdcFormatted = formatAmount(gasCostUsdc, 6);
 
       logger.success("Chain added to multi-chain plan", {
         chainId: chainIdNum,
         chainName: cfg.name,
-        balance: balance.toString(),
+        balance: chainBalance.balance.toString(),
         balanceFormatted,
-        maxSpendable: maxSpendable.toString(),
+        maxSpendable: chainBalance.maxSpendable.toString(),
         maxSpendableFormatted,
         estimatedGas: gas.toString(),
         gasPrice: gasPrice.toString(),
@@ -218,8 +244,8 @@ export async function buildMultiChainUsdcPlan(
 
       perChain.push({
         chainId: chainIdNum,
-        balance,
-        maxSpendable,
+        balance: chainBalance.balance,
+        maxSpendable: chainBalance.maxSpendable,
         gasCostUsdc,
       });
     } catch (error) {
@@ -229,6 +255,7 @@ export async function buildMultiChainUsdcPlan(
     }
   }
 
+  // Re-check total after gas estimation (in case some chains failed)
   const totalAvailable = perChain.reduce(
     (acc, c) => acc + c.maxSpendable,
     0n,
@@ -339,6 +366,38 @@ export async function planUsdcSend(
     toWallet,
     amountUsdc: amountUsdc.toString(),
     amountUsdcFormatted,
+  });
+
+  // Quick balance check: sum all USDC balances across chains
+  // This allows fast rejection if total balance is insufficient
+  logger.debug("Quick total balance check");
+  let quickTotalBalance = 0n;
+  for (const [chainIdStr, cfg] of Object.entries(CHAINS)) {
+    const chainIdNum = Number(chainIdStr) as ChainId;
+    const usdc = cfg.commonTokens.USDC;
+    if (usdc) {
+      const balance = getErc20Balance(chainIdNum, usdc, fromWallet);
+      quickTotalBalance += balance;
+    }
+  }
+
+  // Fast rejection: if total balance is insufficient, return immediately
+  if (quickTotalBalance < amountUsdc) {
+    const quickTotalFormatted = formatAmount(quickTotalBalance, 6);
+    logger.warn("Insufficient total balance across all chains (quick check)", {
+      totalBalance: quickTotalBalance.toString(),
+      totalBalanceFormatted: quickTotalFormatted,
+      required: amountUsdc.toString(),
+      requiredFormatted: amountUsdcFormatted,
+    });
+    return null; // Return immediately without any gas estimation
+  }
+
+  logger.info("Sufficient total balance found, proceeding with planning", {
+    totalBalance: quickTotalBalance.toString(),
+    totalBalanceFormatted: formatAmount(quickTotalBalance, 6),
+    required: amountUsdc.toString(),
+    requiredFormatted: amountUsdcFormatted,
   });
 
   // First, try to find a single chain with sufficient balance
