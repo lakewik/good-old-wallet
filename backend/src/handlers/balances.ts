@@ -135,7 +135,11 @@ export async function getNativeBalanceFromProvider(
   logger.debug("Fetching native balance from provider", { chainId, wallet });
 
   try {
-    const balance = await providers[chainId].getBalance(wallet);
+    const provider = providers[chainId];
+    if (!provider) {
+      throw new Error(`Provider not configured for chain ${chainId}. Chain may be commented out in chains.ts`);
+    }
+    const balance = await provider.getBalance(wallet);
     logger.info("Native balance fetched from RPC", {
       chainId,
       wallet,
@@ -168,10 +172,14 @@ export async function getErc20BalanceFromProvider(
   });
 
   try {
+    const provider = providers[chainId];
+    if (!provider) {
+      throw new Error(`Provider not configured for chain ${chainId}. Chain may be commented out in chains.ts`);
+    }
     const erc20 = new ethers.Contract(
       token.address,
       ["function balanceOf(address) view returns (uint256)"],
-      providers[chainId],
+      provider,
     );
     const balance = await erc20.balanceOf(wallet) as bigint;
     logger.info("ERC-20 balance fetched from RPC", {

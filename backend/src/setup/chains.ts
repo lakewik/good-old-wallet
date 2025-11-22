@@ -24,26 +24,26 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     minNativeBalance: BigInt("30000000000000000"), // 0.03 ETH
   },
 
-  [ChainId.ARBITRUM_ONE]: {
-    id: ChainId.ARBITRUM_ONE,
-    name: "Arbitrum One",
-    rpcUrl: process.env.RPC_ARBITRUM!,
-    native: {
-      symbol: "ETH",
-      decimals: 18,
-      address: NATIVE_TOKEN_ADDRESS,
-      isNative: true,
-    },
-    commonTokens: {
-      USDC: {
-        symbol: "USDC",
-        decimals: 6,
-        // Native USDC on Arbitrum One
-        address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
-      },
-    },
-    minNativeBalance: BigInt("5000000000000000"), // 0.005 ETH
-  },
+  // [ChainId.ARBITRUM_ONE]: {
+  //   id: ChainId.ARBITRUM_ONE,
+  //   name: "Arbitrum One",
+  //   rpcUrl: process.env.RPC_ARBITRUM!,
+  //   native: {
+  //     symbol: "ETH",
+  //     decimals: 18,
+  //     address: NATIVE_TOKEN_ADDRESS,
+  //     isNative: true,
+  //   },
+  //   commonTokens: {
+  //     USDC: {
+  //       symbol: "USDC",
+  //       decimals: 6,
+  //       // Native USDC on Arbitrum One
+  //       address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+  //     },
+  //   },
+  //   minNativeBalance: BigInt("5000000000000000"), // 0.005 ETH
+  // },
 
   [ChainId.BASE]: {
     id: ChainId.BASE,
@@ -66,26 +66,26 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     minNativeBalance: BigInt("3000000000000000"), // 0.003 ETH
   },
 
-  [ChainId.OPTIMISM]: {
-    id: ChainId.OPTIMISM,
-    name: "Optimism",
-    rpcUrl: process.env.RPC_OPTIMISM!,
-    native: {
-      symbol: "ETH",
-      decimals: 18,
-      address: NATIVE_TOKEN_ADDRESS,
-      isNative: true,
-    },
-    commonTokens: {
-      USDC: {
-        symbol: "USDC",
-        decimals: 6,
-        // Native USDC on OP Mainnet
-        address: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-      },
-    },
-    minNativeBalance: BigInt("3000000000000000"), // 0.003 ETH
-  },
+  // [ChainId.OPTIMISM]: {
+  //   id: ChainId.OPTIMISM,
+  //   name: "Optimism",
+  //   rpcUrl: process.env.RPC_OPTIMISM!,
+  //   native: {
+  //     symbol: "ETH",
+  //     decimals: 18,
+  //     address: NATIVE_TOKEN_ADDRESS,
+  //     isNative: true,
+  //   },
+  //   commonTokens: {
+  //     USDC: {
+  //       symbol: "USDC",
+  //       decimals: 6,
+  //       // Native USDC on OP Mainnet
+  //       address: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+  //     },
+  //   },
+  //   minNativeBalance: BigInt("3000000000000000"), // 0.003 ETH
+  // },
 };
 
 // Log chain initialization

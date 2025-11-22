@@ -27,7 +27,14 @@ export async function estimateUsdcTransferGas(
   
   try {
     const provider = providers[chainId];
-    const usdc = CHAINS[chainId].commonTokens.USDC;
+    if (!provider) {
+      throw new Error(`Provider not configured for chain ${chainId}. Chain may be commented out in chains.ts`);
+    }
+    const chainConfig = CHAINS[chainId];
+    if (!chainConfig) {
+      throw new Error(`Chain ${chainId} not configured`);
+    }
+    const usdc = chainConfig.commonTokens.USDC;
 
     if (!usdc) {
       throw new Error(`USDC token not configured for chain ${chainId}`);

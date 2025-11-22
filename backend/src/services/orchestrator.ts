@@ -18,17 +18,13 @@ export async function selectBestSingleChainForUsdcSend(
 
   const candidates: ChainQuote[] = [];
 
-  for (const chainId of Object.values(ChainId)) {
-    // Filter out string keys from numeric enum
-    if (typeof chainId !== "number") continue;
-    
-    const chainIdNum = chainId as ChainId;
+  // Only iterate over chains that are actually configured in CHAINS
+  for (const [chainIdStr, cfg] of Object.entries(CHAINS)) {
+    const chainIdNum = Number(chainIdStr) as ChainId;
     logger.debug("Evaluating chain for single chain send", {
       chainId: chainIdNum,
-      chainName: CHAINS[chainIdNum].name,
+      chainName: cfg.name,
     });
-
-    const cfg = CHAINS[chainIdNum];
     const usdc = cfg.commonTokens.USDC;
     if (!usdc) {
       logger.debug("Chain has no USDC token configured", { chainId: chainIdNum });
@@ -121,17 +117,13 @@ export async function buildMultiChainUsdcPlan(
 
   // 1. Collect per-chain info
   logger.debug("Collecting per-chain information");
-  for (const chainId of Object.values(ChainId)) {
-    // Filter out string keys from numeric enum
-    if (typeof chainId !== "number") continue;
-    
-    const chainIdNum = chainId as ChainId;
+  // Only iterate over chains that are actually configured in CHAINS
+  for (const [chainIdStr, cfg] of Object.entries(CHAINS)) {
+    const chainIdNum = Number(chainIdStr) as ChainId;
     logger.debug("Processing chain for multi-chain plan", {
       chainId: chainIdNum,
-      chainName: CHAINS[chainIdNum].name,
+      chainName: cfg.name,
     });
-
-    const cfg = CHAINS[chainIdNum];
     const usdc = cfg.commonTokens.USDC;
     if (!usdc) {
       logger.debug("Chain has no USDC token configured", { chainId: chainIdNum });

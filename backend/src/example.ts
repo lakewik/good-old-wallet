@@ -29,7 +29,7 @@ import {
 
 // Example wallet addresses (replace with real addresses)
 // Note: These are example addresses - replace with actual wallet addresses in production
-const fromWallet = "0x49E56338f2f3E65cAaFe15C6bb95E7dc9bf73158" as const;
+const fromWallet = "0x13190e7028c5e7e70f87efe08a973c330b09f458" as const;
 const toWallet = "0x0A088759743B403eFB2e2F766f77Ec961f185e0f" as const;
 
 async function example0_LoadBalancesFromJson() {
@@ -38,32 +38,18 @@ async function example0_LoadBalancesFromJson() {
 
   // Example JSON structure that would come from an external API
   // Format: { [chainId]: { [wallet]: { [tokenAddress]: "balance" } } }
-  const balancesFromApi = {
-    [ChainId.ETHEREUM]: {
+  // Only include chains that are actually configured in CHAINS
+  const balancesFromApi: Record<number, Record<string, Record<string, string>>> = {};
+  
+  for (const [chainIdStr, chain] of Object.entries(CHAINS)) {
+    const chainId = Number(chainIdStr) as ChainId;
+    balancesFromApi[chainId] = {
       [fromWallet]: {
-        [NATIVE_TOKEN_ADDRESS]: "5000000000000000000", // 5 ETH
-        [CHAINS[ChainId.ETHEREUM].commonTokens.USDC.address]: "200000000", // 200 USDC
+        [NATIVE_TOKEN_ADDRESS]: "5000000000000000000", // 5 ETH (example)
+        [chain.commonTokens.USDC.address]: "200000000", // 200 USDC (example)
       },
-    },
-    [ChainId.ARBITRUM_ONE]: {
-      [fromWallet]: {
-        [NATIVE_TOKEN_ADDRESS]: "1000000000000000000", // 1 ETH
-        [CHAINS[ChainId.ARBITRUM_ONE].commonTokens.USDC.address]: "150000000", // 150 USDC
-      },
-    },
-    [ChainId.BASE]: {
-      [fromWallet]: {
-        [NATIVE_TOKEN_ADDRESS]: "500000000000000000", // 0.5 ETH
-        [CHAINS[ChainId.BASE].commonTokens.USDC.address]: "100000000", // 100 USDC
-      },
-    },
-    [ChainId.OPTIMISM]: {
-      [fromWallet]: {
-        [NATIVE_TOKEN_ADDRESS]: "300000000000000000", // 0.3 ETH
-        [CHAINS[ChainId.OPTIMISM].commonTokens.USDC.address]: "50000000", // 50 USDC
-      },
-    },
-  };
+    };
+  }
 
   // Update balances from JSON (this would be called when you receive data from API)
   updateBalancesFromJson(balancesFromApi);
@@ -74,8 +60,8 @@ async function example0_LoadBalancesFromJson() {
 async function example1_AutomaticPlanning() {
   console.log("\n=== Example 1: Automatic Planning (Single or Multi-Chain) ===");
 
-  // Try to send 100 USDC (6 decimals = 100000000)
-  const amountUsdc = BigInt("100000000"); // 100 USDC
+  // Try to send 0.01 USDC (6 decimals = 10000)
+  const amountUsdc = BigInt("10000"); // 0.01 USDC
 
   const plan = await planUsdcSend(fromWallet, toWallet, amountUsdc);
 
@@ -173,28 +159,26 @@ async function example4_CheckBalances() {
 
   // Check native balances from JSON storage
   console.log("Native Token Balances (from JSON storage):");
-  for (const chainId of Object.values(ChainId)) {
-    if (typeof chainId === "number") {
-      const balance = getNativeBalance(chainId as ChainId, fromWallet);
-      const chain = CHAINS[chainId as ChainId];
-      const balanceEth = Number(balance) / Math.pow(10, chain.native.decimals);
-      console.log(`   ${chain.name}: ${balanceEth.toFixed(6)} ${chain.native.symbol}`);
-    }
+  // Only iterate over chains that are actually configured in CHAINS
+  for (const [chainIdStr, chain] of Object.entries(CHAINS)) {
+    const chainId = Number(chainIdStr) as ChainId;
+    const balance = getNativeBalance(chainId, fromWallet);
+    const balanceEth = Number(balance) / Math.pow(10, chain.native.decimals);
+    console.log(`   ${chain.name}: ${balanceEth.toFixed(6)} ${chain.native.symbol}`);
   }
 
   // Check USDC balances from JSON storage
   console.log("\nUSDC Balances (from JSON storage):");
-  for (const chainId of Object.values(ChainId)) {
-    if (typeof chainId === "number") {
-      const chain = CHAINS[chainId as ChainId];
-      const usdc = chain.commonTokens.USDC;
-      if (usdc) {
-        const balance = getErc20Balance(chainId as ChainId, usdc, fromWallet);
-        const balanceUsdc = Number(balance) / Math.pow(10, usdc.decimals);
-        console.log(`   ${chain.name}: ${balanceUsdc.toFixed(2)} USDC`);
-      } else {
-        console.log(`   ${chain.name}: USDC not configured`);
-      }
+  // Only iterate over chains that are actually configured in CHAINS
+  for (const [chainIdStr, chain] of Object.entries(CHAINS)) {
+    const chainId = Number(chainIdStr) as ChainId;
+    const usdc = chain.commonTokens.USDC;
+    if (usdc) {
+      const balance = getErc20Balance(chainId, usdc, fromWallet);
+      const balanceUsdc = Number(balance) / Math.pow(10, usdc.decimals);
+      console.log(`   ${chain.name}: ${balanceUsdc.toFixed(2)} USDC`);
+    } else {
+      console.log(`   ${chain.name}: USDC not configured`);
     }
   }
 

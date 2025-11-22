@@ -61,12 +61,9 @@ async function getSummarizedAmounts(address: Address): Promise<SummarizedAmounts
   let totalUsdcSmallestUnit = 0n;
   let nativeSymbol = "ETH"; // default
 
-  for (const chainIdValue of Object.values(ChainId)) {
-    // Filter out string keys from numeric enum
-    if (typeof chainIdValue !== "number") continue;
-
-    const chainId = chainIdValue as ChainId;
-    const chain = CHAINS[chainId];
+  // Only iterate over chains that are actually configured in CHAINS
+  for (const [chainIdStr, chain] of Object.entries(CHAINS)) {
+    const chainId = Number(chainIdStr) as ChainId;
 
     // Get native balance
     const nativeBalance = getNativeBalance(chainId, address);
