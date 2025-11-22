@@ -1,0 +1,31 @@
+{
+  "name": "abstracted-wallet-app",
+  "version": "1.0.0",
+  "description": "Abstracted wallet orchestrator for multi-chain USDC transfers",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "dev:server": "tsx watch src/server.ts",
+    "start": "node dist/index.js",
+    "start:server": "node dist/server.js"
+  },
+  "keywords": [
+    "ethereum",
+    "multi-chain",
+    "wallet",
+    "orchestrator"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
