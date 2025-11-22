@@ -13,6 +13,11 @@ src/
   │   └── gas.ts          # Gas estimation utilities
   ├── services/           # Service layer
   │   └── orchestrator.ts # Main orchestration logic
+  ├── routes/             # API route handlers
+  │   ├── assets.ts       # Assets balance endpoint
+  │   ├── verify.ts       # Payment verification endpoint
+  │   ├── settle.ts       # Payment settlement endpoint
+  │   └── index.ts        # Route exports
   ├── index.ts            # Library entry point (exports all modules)
   ├── server.ts           # HTTP API server entry point
   └── example.ts          # Example usage and demonstrations
@@ -73,12 +78,37 @@ See `example.ts` for detailed usage examples.
 
 When running as a server (`npm run dev:server`), the following endpoints are available:
 
-- `GET /health` - Health check endpoint
-- `GET /get-summarized-amounts/:address` - Get balance summary across all chains for an address
+#### `GET /health`
+Health check endpoint to verify server is running.
 
-Example:
 ```bash
-curl http://localhost:7000/get-summarized-amounts/0x742d35Cc6634C0532925a3b844Bc454e4438f44e
+curl http://localhost:7000/health
+```
+
+#### `GET /assets/:address`
+Get balance summary across all chains for an Ethereum address.
+
+```bash
+curl http://localhost:7000/assets/0x742d35Cc6634C0532925a3b844Bc454e4438f44e
+```
+
+#### `POST /verify`
+Verify payment payload and signature (placeholder implementation).
+
+```bash
+curl -X POST http://localhost:7000/verify \
+  -H "Content-Type: application/json" \
+  -d '{"paymentPayload": {...}, "paymentDetails": {...}}'
+```
+
+#### `POST /settle`
+Execute Safe transaction for payment settlement (placeholder implementation).
+Returns 200 with `X-PAYMENT-RESPONSE` header.
+
+```bash
+curl -X POST http://localhost:7000/settle \
+  -H "Content-Type: application/json" \
+  -d '{"paymentPayload": {...}, "paymentDetails": {...}}'
 ```
 
 ## Features
