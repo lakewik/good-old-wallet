@@ -6,6 +6,11 @@ import {
   type PendingTransaction,
   type SubTransaction,
 } from "../utils/storage";
+import { getBlockExplorerUrl } from "../utils/blockExplorers";
+import {
+  executeTransactionPlan,
+  type ExecuteTransactionPlanParams,
+} from "../utils/transactionExecution";
 
 interface TransactionLeg {
   chainId: number;
@@ -248,62 +253,80 @@ export default function ConfirmationScreen({
   onApprove,
   onCancel,
   onTransactionSaved,
+  password,
+  encryptedVault,
 }: ConfirmationScreenProps) {
   const formatAddress = (addr: string): string => {
     if (addr.length <= 10) return addr;
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
   };
 
-  const getBlockExplorerUrl = (chainId: number, txHash: string): string => {
-    const explorers: Record<number, string> = {
-      1: "https://etherscan.io/tx/",
-      8453: "https://basescan.org/tx/",
-    };
-    const base = explorers[chainId] || "https://etherscan.io/tx/";
-    return `${base}${txHash}`;
-  };
 
   const handleApprove = async () => {
-    // Create pending transaction
-    const transactionId = `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Generate transaction hashes immediately (transaction has already been sent)
-    const subTransactions: SubTransaction[] = plan.legs.map((leg) => {
-      const txHash = `0x${Math.random().toString(16).substr(2, 64)}`;
-      return {
-        chainId: leg.chainId,
-        chainName: leg.chainName,
-        amountUsdc: leg.amountUsdc,
-        gasCostUsdc: leg.gasCostUsdc,
-        status: "pending" as const,
-        txHash,
-        blockExplorerUrl: getBlockExplorerUrl(leg.chainId, txHash),
+    try {
+      // Execute the transaction plan
+      // This will send actual transactions to the blockchain
+      const executionParams: ExecuteTransactionPlanParams = {
+        plan,
+        recipientAddress,
+        password,
+        encryptedVault,
       };
-    });
 
-    const pendingTransaction: PendingTransaction = {
-      id: transactionId,
-      recipientAddress,
-      tokenSymbol,
-      totalAmount: plan.totalAmount,
-      totalGasCostUsdc: plan.totalGasCostUsdc,
-      type: plan.type,
-      subTransactions,
-      status: "pending",
-      createdAt: Date.now(),
-    };
+      const executionResult = await executeTransactionPlan(executionParams);
 
-    // Save to storage
-    const existing = await getPendingTransactions();
-    await savePendingTransactions([...existing, pendingTransaction]);
+      // Convert execution results to sub-transactions
+      const subTransactions: SubTransaction[] = executionResult.legResults.map(
+        (legResult) => ({
+          chainId: legResult.chainId,
+          chainName: legResult.chainName,
+          amountUsdc: plan.legs.find((l) => l.chainId === legResult.chainId)
+            ?.amountUsdc || "0",
+          gasCostUsdc: plan.legs.find((l) => l.chainId === legResult.chainId)
+            ?.gasCostUsdc || "0",
+          status: legResult.success ? ("pending" as const) : ("failed" as const),
+          txHash: legResult.txHash,
+          blockExplorerUrl: legResult.blockExplorerUrl,
+        })
+      );
 
-    // Notify parent
-    if (onTransactionSaved) {
-      onTransactionSaved();
+      // Determine overall transaction status
+      const overallStatus: "pending" | "success" | "failed" =
+        executionResult.overallSuccess
+          ? "pending" // Will be updated to "success" when confirmed
+          : executionResult.successCount > 0
+          ? "pending" // Partial success - still pending
+          : "failed"; // All failed
+
+      const pendingTransaction: PendingTransaction = {
+        id: executionResult.transactionId,
+        recipientAddress,
+        tokenSymbol,
+        totalAmount: plan.totalAmount,
+        totalGasCostUsdc: plan.totalGasCostUsdc,
+        type: plan.type,
+        subTransactions,
+        status: overallStatus,
+        createdAt: Date.now(),
+      };
+
+      // Save to storage
+      const existing = await getPendingTransactions();
+      await savePendingTransactions([...existing, pendingTransaction]);
+
+      // Notify parent
+      if (onTransactionSaved) {
+        onTransactionSaved();
+      }
+
+      // Call the approve handler (which will navigate back)
+      onApprove();
+    } catch (error) {
+      console.error("Error executing transaction plan:", error);
+      // TODO: Show error message to user
+      // For now, we'll still call onApprove to allow user to retry
+      onApprove();
     }
-
-    // Call the approve handler (which will handle actual transaction execution)
-    onApprove();
   };
 
   return (

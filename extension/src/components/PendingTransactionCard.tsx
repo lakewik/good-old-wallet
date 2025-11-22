@@ -4,6 +4,7 @@ import type {
   SubTransaction,
   TransactionStatus,
 } from "../utils/storage";
+import { getBlockExplorerUrl } from "../utils/blockExplorers";
 
 interface PendingTransactionCardProps {
   transaction: PendingTransaction;
@@ -96,14 +97,6 @@ function SubTransactionRow({
   isExpanded: boolean;
   isFirst: boolean;
 }) {
-  const getBlockExplorerUrl = (chainId: number, txHash: string): string => {
-    const explorers: Record<number, string> = {
-      1: "https://etherscan.io/tx/",
-      8453: "https://basescan.org/tx/",
-    };
-    const base = explorers[chainId] || "https://etherscan.io/tx/";
-    return `${base}${txHash}`;
-  };
 
   // Transaction hash should always be available since transaction has already been sent
   const txHash = subTx.txHash || "";

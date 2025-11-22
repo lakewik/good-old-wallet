@@ -3,6 +3,14 @@ import Button from "./Button";
 import { PageContainer, ContentContainer } from "./Container";
 import { LOGO_PATH, LOGO_ALT } from "../constants";
 import ConfirmationScreen from "./ConfirmationScreen";
+import {
+  planSendingTransaction,
+  normalizeTransactionPlanWithAmount,
+  ApiError,
+  type PlanRequest,
+} from "../utils/api";
+import { getEncryptedVault } from "../utils/storage";
+import { WalletVault } from "../utils/WalletVault";
 
 interface Token {
   image: string;
@@ -26,24 +34,20 @@ interface TransactionPlan {
   totalGasCostUsdc: string;
 }
 
-interface ApiResponse {
-  success: boolean;
-  plan: TransactionPlan | null;
-  message?: string;
-}
-
 interface SendScreenProps {
   token: Token;
   onBack: () => void;
   onCancel: () => void;
-  apiEndpoint?: string;
+  password: string;
+  encryptedVault: any;
 }
 
 export default function SendScreen({
   token,
   onBack,
   onCancel,
-  apiEndpoint = "https://api.example.com/send", // Default endpoint, should be configured
+  password,
+  encryptedVault,
 }: SendScreenProps) {
   const [amount, setAmount] = useState("");
   const [address, setAddress] = useState("");
@@ -56,7 +60,13 @@ export default function SendScreen({
   const exceedsBalance = enteredAmount > tokenBalance;
   const isValidAmount = amount !== "" && enteredAmount > 0 && !exceedsBalance;
   const isValidAddress = address.trim().length > 0;
-  const canSend = isValidAmount && isValidAddress && !exceedsBalance && !isLoading;
+  const isUsdcToken = token.symbol.toUpperCase() === "USDC";
+  const canSend =
+    isValidAmount &&
+    isValidAddress &&
+    !exceedsBalance &&
+    !isLoading &&
+    isUsdcToken;
 
   const handleMaxClick = () => {
     setAmount(token.amount);
@@ -69,52 +79,89 @@ export default function SendScreen({
     setError(null);
 
     try {
-      // Mock API call - simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Convert amount to micro-USDC (6 decimals) for API
-      const amountInMicroUsdc = Math.floor(enteredAmount * 1000000).toString();
-
-      // Mock response - always return multi-chain for now
-      const mockData: ApiResponse = {
-        success: true,
-        plan: {
-          type: "multi",
-          legs: [
-            {
-              chainId: 1,
-              chainName: "Ethereum",
-              amountUsdc: Math.floor(parseFloat(amountInMicroUsdc) * 0.83).toString(), // 83% of total
-              gasCostUsdc: "62",
-            },
-            {
-              chainId: 8453,
-              chainName: "Base",
-              amountUsdc: Math.floor(parseFloat(amountInMicroUsdc) * 0.17).toString(), // 17% of total
-              gasCostUsdc: "75",
-            },
-          ],
-          totalAmount: amountInMicroUsdc,
-          totalGasCostUsdc: "137",
+      // Get wallet address from vault
+      const vault = new WalletVault();
+      let sourceAddress = "";
+      
+      await vault.unlockAndExecute(
+        password,
+        encryptedVault,
+        async (seedPhraseBytes) => {
+          const decoder = new TextDecoder();
+          const seedPhrase = decoder.decode(seedPhraseBytes);
+          const { ethers } = await import("ethers");
+          const wallet = ethers.Wallet.fromPhrase(seedPhrase);
+          sourceAddress = wallet.address;
         },
+      );
+
+      if (!sourceAddress) {
+        throw new Error("Failed to get wallet address");
+      }
+
+      // Validate address format
+      if (!address.match(/^0x[a-fA-F0-9]{40}$/i)) {
+        setError("Invalid recipient address format");
+        setIsLoading(false);
+        return;
+      }
+
+      // Validate token is USDC
+      if (token.symbol.toUpperCase() !== "USDC") {
+        setError("Only USDC transfers are currently supported");
+        setIsLoading(false);
+        return;
+      }
+
+      // Prepare API request
+      const planRequest: PlanRequest = {
+        sourceAddress,
+        destinationAddress: address.trim(),
+        amount: amount,
+        tokenName: "USDC",
       };
 
-      if (mockData.plan === null) {
-        // Insufficient balance case
-        setError(mockData.message || "No viable plan found. Insufficient balance across all chains.");
+      // Call API to plan transaction
+      const response = await planSendingTransaction(planRequest);
+
+      if (!response.success || !response.plan) {
+        // No viable plan found
+        setError(
+          response.message ||
+            "No viable plan found. Insufficient balance across all chains.",
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      // Normalize the plan response to match UI expectations
+      const normalizedPlan = normalizeTransactionPlanWithAmount(
+        response.plan,
+        amount,
+      );
+
+      if (!normalizedPlan) {
+        setError("Failed to process transaction plan");
         setIsLoading(false);
         return;
       }
 
       // Success - show confirmation screen
-      setConfirmationPlan(mockData.plan);
+      setConfirmationPlan(normalizedPlan);
       setIsLoading(false);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to create transaction plan";
+      console.error("Error creating transaction plan:", err);
+      
+      let errorMessage = "Failed to create transaction plan";
+      
+      if (err instanceof ApiError) {
+        errorMessage = err.message;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      
       setError(errorMessage);
       setIsLoading(false);
-      console.error("Error creating transaction plan:", err);
     }
   };
 
@@ -144,6 +191,8 @@ export default function SendScreen({
         onApprove={handleApprove}
         onCancel={handleCancelConfirmation}
         onTransactionSaved={handleTransactionSaved}
+        password={password}
+        encryptedVault={encryptedVault}
       />
     );
   }
@@ -424,6 +473,24 @@ export default function SendScreen({
             }}
           />
         </div>
+
+        {/* Token Support Warning */}
+        {!isUsdcToken && (
+          <div
+            style={{
+              width: "100%",
+              padding: "var(--spacing-md)",
+              background: "rgba(255, 193, 7, 0.1)",
+              border: "1px solid rgba(255, 193, 7, 0.3)",
+              borderRadius: "var(--border-radius)",
+              color: "#ffc107",
+              fontSize: "12px",
+              marginBottom: "var(--spacing-md)",
+            }}
+          >
+            Only USDC transfers are currently supported.
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (

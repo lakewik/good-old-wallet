@@ -13,3 +13,6 @@ export const BUTTON_LABELS = {
   IMPORT_SEED_PHRASE: "Import Seed Phrase",
   GENERATE_NEW_SEED_PHRASE: "Generate New Seed Phrase",
 } as const;
+
+// API Configuration
+export const API_BASE_URL = "https://595b85c58418.ngrok-free.app";

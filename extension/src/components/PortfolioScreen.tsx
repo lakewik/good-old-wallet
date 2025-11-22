@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Button from "./Button";
 import { PageContainer, ContentContainer } from "./Container";
 import { LOGO_PATH, LOGO_ALT } from "../constants";
@@ -12,6 +12,11 @@ import {
 import type { EncryptedVault } from "../utils/WalletVault";
 import SendScreen from "./SendScreen";
 import PendingTransactionCard from "./PendingTransactionCard";
+import {
+  getBalancesSummary,
+  ApiError,
+} from "../utils/api";
+import { getBlockExplorerUrl } from "../utils/blockExplorers";
 
 interface PortfolioScreenProps {
   password: string;
@@ -202,13 +207,18 @@ export default function PortfolioScreen({
     useState<string>("$0.00");
   const [tokens, setTokens] = useState<Token[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
   const [pendingTransactions, setPendingTransactions] = useState<
     PendingTransaction[]
   >([]);
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
+    
     loadWalletData();
     loadPendingTransactions();
   }, []);
@@ -273,14 +283,6 @@ export default function PortfolioScreen({
     }
   };
 
-  const getBlockExplorerUrl = (chainId: number, txHash: string): string => {
-    const explorers: Record<number, string> = {
-      1: "https://etherscan.io/tx/",
-      8453: "https://basescan.org/tx/",
-    };
-    const base = explorers[chainId] || "https://etherscan.io/tx/";
-    return `${base}${txHash}`;
-  };
 
   const handleTransactionUpdate = async (updated: PendingTransaction) => {
     const all = await getPendingTransactions();
@@ -294,6 +296,7 @@ export default function PortfolioScreen({
 
   const loadWalletData = async () => {
     try {
+      setError(null);
       const vault = new WalletVault();
       await vault.unlockAndExecute(
         password,
@@ -305,66 +308,89 @@ export default function PortfolioScreen({
           // Derive wallet address
           const { ethers } = await import("ethers");
           const wallet = ethers.Wallet.fromPhrase(seedPhrase);
-          setAddress(wallet.address);
+          const walletAddress = wallet.address;
+          setAddress(walletAddress);
 
-          // TODO: Fetch portfolio value and tokens from blockchain
-          // For now, using placeholder data
-          setTotalPortfolioValue("$12,345.67");
-          setTokens([
-            {
-              image: "",
-              name: "Ethereum",
-              symbol: "ETH",
-              amount: "2.5",
-              valueUSD: "$6,234.50",
-            },
-            {
-              image: "",
-              name: "USD Coin",
-              symbol: "USDC",
-              amount: "5,000.00",
-              valueUSD: "$5,000.00",
-            },
-            {
-              image: "",
-              name: "Wrapped Ethereum",
-              symbol: "WETH",
-              amount: "1.0",
-              valueUSD: "$2,491.80",
-            },
-            {
-              image: "",
-              name: "Dai Stablecoin",
-              symbol: "DAI",
-              amount: "1,000.00",
-              valueUSD: "$1,000.00",
-            },
-            {
-              image: "",
-              name: "Chainlink",
-              symbol: "LINK",
-              amount: "50.0",
-              valueUSD: "$750.00",
-            },
-            {
-              image: "",
-              name: "Uniswap",
-              symbol: "UNI",
-              amount: "100.0",
-              valueUSD: "$500.00",
-            },
-            {
-              image: "",
-              name: "Aave Token",
-              symbol: "AAVE",
-              amount: "5.0",
-              valueUSD: "$370.37",
-            },
-          ]);
+          // Fetch portfolio data from API
+          try {
+            // Fetch balances summary (contains everything we need)
+            const balancesSummary = await getBalancesSummary(walletAddress);
+            
+            // Format total portfolio value
+            const portfolioValue = parseFloat(
+              balancesSummary.totalPortfolioValueUSD,
+            );
+            setTotalPortfolioValue(
+              `$${portfolioValue.toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}`,
+            );
+
+            // Build token list from totals
+            const tokenList: Token[] = [];
+
+            // Add native token (ETH)
+            const ethTotal = balancesSummary.totals.ETH;
+            if (ethTotal && parseFloat(ethTotal.totalFormatted) > 0) {
+              // Calculate USD value for ETH (portfolio value minus USDC)
+              const usdcTotal = balancesSummary.totals.USDC;
+              const usdcValue = usdcTotal ? parseFloat(usdcTotal.totalFormatted) : 0;
+              const ethValueUSD = portfolioValue - usdcValue;
+              
+              tokenList.push({
+                image: "",
+                name: "Ethereum",
+                symbol: ethTotal.symbol || "ETH",
+                amount: ethTotal.totalFormatted,
+                valueUSD: `$${ethValueUSD.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}`,
+              });
+            }
+
+            // Add USDC token
+            const usdcTotal = balancesSummary.totals.USDC;
+            if (usdcTotal && parseFloat(usdcTotal.totalFormatted) > 0) {
+              const usdcValue = parseFloat(usdcTotal.totalFormatted);
+              tokenList.push({
+                image: "",
+                name: "USD Coin",
+                symbol: "USDC",
+                amount: usdcTotal.totalFormatted,
+                valueUSD: `$${usdcValue.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}`,
+              });
+            }
+
+            setTokens(tokenList);
+          } catch (apiError) {
+            console.error("Error fetching portfolio data:", apiError);
+            if (apiError instanceof ApiError) {
+              setError(
+                `Failed to load portfolio: ${apiError.message}. Please try again later.`,
+              );
+            } else {
+              setError(
+                "Failed to load portfolio data. Please try again later.",
+              );
+            }
+            // Set default empty state
+            setTotalPortfolioValue("$0.00");
+            setTokens([]);
+          }
         },
       );
     } catch (error) {
       console.error("Error loading wallet data:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load wallet. Please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -416,6 +442,56 @@ export default function PortfolioScreen({
     );
   }
 
+  if (error && tokens.length === 0) {
+    return (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "var(--spacing-md)",
+          padding: "var(--spacing-md)",
+          color: "var(--text-secondary)",
+          background: "var(--bg-primary)",
+        }}
+      >
+        <div
+          style={{
+            padding: "var(--spacing-md)",
+            background: "rgba(255, 68, 68, 0.1)",
+            border: "1px solid rgba(255, 68, 68, 0.3)",
+            borderRadius: "var(--border-radius)",
+            color: "#ff4444",
+            fontSize: "12px",
+            textAlign: "center",
+            maxWidth: "300px",
+          }}
+        >
+          {error}
+        </div>
+        <button
+          onClick={loadWalletData}
+          style={{
+            padding: "var(--spacing-sm) var(--spacing-md)",
+            background: "var(--bg-button-primary)",
+            border: "1px solid var(--border-focus)",
+            borderRadius: "var(--border-radius)",
+            color: "var(--text-primary)",
+            fontSize: "12px",
+            fontFamily: "var(--font-family-sans)",
+            cursor: "pointer",
+            fontWeight: 600,
+          }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   // Show send screen if a token is selected
   if (selectedToken) {
     return (
@@ -423,6 +499,8 @@ export default function PortfolioScreen({
         token={selectedToken}
         onBack={handleBackFromSend}
         onCancel={handleCancelSend}
+        password={password}
+        encryptedVault={encryptedVault}
       />
     );
   }
