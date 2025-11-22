@@ -107,8 +107,9 @@ async function example1_AutomaticPlanning() {
       console.log(`      Gas Cost: ${leg.gasCostUsdc.toString()} USDC`);
     });
 
-    // You would execute transfers on each chain here
+    // You would execute transfers on each chain here - we can use EIL here for sign one tx for multiple chains
     // plan.plan.legs.forEach(leg => {
+    //
     //   executeTransfer(leg.chainId, fromWallet, toWallet, leg.amountUsdc);
     // });
   }
