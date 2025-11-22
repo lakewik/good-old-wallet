@@ -24,11 +24,16 @@
     "@aboutcircles/sdk-rpc": "^0.1.1",
     "@safe-global/protocol-kit": "^6.1.2",
     "@safe-global/safe-core-sdk-types": "^5.1.0",
+    "@eil-protocol/accounts": "^0.1.2",
+    "@eil-protocol/sdk": "^0.1.2",
     "dotenv": "^16.4.5",
-    "ethers": "^6.13.0"
+    "ethers": "^6.13.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-dist": "^5.30.2"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
+    "@types/swagger-jsdoc": "^6.0.4",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
   }

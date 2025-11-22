@@ -23,7 +23,6 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     // e.g. keep at least 0.03 ETH (~few swaps + sends)
     minNativeBalance: BigInt("30000000000000000"), // 0.03 ETH
   },
-
   [ChainId.ARBITRUM_ONE]: {
     id: ChainId.ARBITRUM_ONE,
     name: "Arbitrum One",
@@ -44,7 +43,6 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     },
     minNativeBalance: BigInt("5000000000000000"), // 0.005 ETH
   },
-
   [ChainId.BASE]: {
     id: ChainId.BASE,
     name: "Base",
@@ -109,6 +107,7 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
 };
 
 // Log chain initialization
+
 logger.info("Initializing chain configurations", {
   chains: Object.values(CHAINS).map(c => ({
     id: c.id,

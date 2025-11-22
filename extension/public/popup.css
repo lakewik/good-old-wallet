@@ -1,0 +1,425 @@
+/* ============================================
+   CSS Variables / Theme
+   ============================================ */
+:root {
+  /* Colors */
+  --bg-primary: #0a0a0a;
+  --text-primary: #ffffff;
+  --text-secondary: #d0d0d0;
+  --text-muted: rgba(255, 255, 255, 0.7);
+  --text-placeholder: rgba(255, 255, 255, 0.5);
+  --text-disabled: rgba(255, 255, 255, 0.3);
+
+  /* Borders */
+  --border-default: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(255, 255, 255, 0.15);
+  --border-focus: rgba(255, 255, 255, 0.2);
+  --border-primary: rgba(255, 255, 255, 0.1);
+
+  /* Backgrounds */
+  --bg-input: rgba(255, 255, 255, 0.02);
+  --bg-input-focus: rgba(255, 255, 255, 0.03);
+  --bg-button-primary: rgba(255, 255, 255, 0.05);
+  --bg-button-primary-hover: rgba(255, 255, 255, 0.08);
+  --bg-button-primary-active: rgba(255, 255, 255, 0.12);
+  --bg-gradient-accent: rgba(0, 255, 255, 0.02);
+
+  /* Shadows */
+  --shadow-focus: 0 0 0 1px rgba(255, 255, 255, 0.05);
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+
+  /* Typography */
+  --font-family-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue",
+    "Segoe UI", sans-serif;
+  --font-family-mono: "SF Mono", "Monaco", "Menlo", monospace;
+  --font-family-serif: "Castoro Titling", "Times New Roman", serif;
+
+  /* Transitions */
+  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Layout */
+  --popup-width: 400px;
+  --popup-height: 500px;
+  --content-max-width: 320px;
+  --border-radius: 6px;
+}
+
+/* ============================================
+   Reset & Base Styles
+   ============================================ */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: var(--popup-width);
+  height: var(--popup-height);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-family: var(--font-family-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+/* Dev mode: constrained dimensions */
+body.dev-mode {
+  height: var(--popup-height);
+  overflow: hidden;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.3),
+    0 0 20px rgba(255, 255, 255, 0.15);
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ============================================
+   Container Components
+   ============================================ */
+.page-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl) 28px;
+  background: var(--bg-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+.page-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    circle at 50% 0%,
+    var(--bg-gradient-accent) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
+}
+
+.content-container {
+  width: 100%;
+  max-width: var(--content-max-width);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xl);
+  position: relative;
+  z-index: 1;
+}
+
+/* Legacy class names for backward compatibility */
+.landing-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl) 28px;
+  background: var(--bg-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+.landing-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    circle at 50% 0%,
+    var(--bg-gradient-accent) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
+}
+
+.landing-content {
+  width: 100%;
+  max-width: var(--content-max-width);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xl);
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================
+   Logo Component
+   ============================================ */
+.logo-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo {
+  width: 130px;
+  height: 130px;
+  object-fit: contain;
+}
+
+/* ============================================
+   Title Component
+   ============================================ */
+.wallet-title {
+  font-size: 26px;
+  font-weight: 400;
+  color: var(--text-primary);
+  margin: 0;
+  text-align: center;
+  letter-spacing: 3px;
+  text-transform: none;
+  font-family: var(--font-family-serif);
+  position: relative;
+  opacity: 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  font-style: normal;
+}
+
+/* ============================================
+   Input Component
+   ============================================ */
+.input-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.input-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-family: var(--font-family-sans);
+}
+
+.input-field {
+  width: 100%;
+  padding: var(--spacing-md);
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  border-radius: var(--border-radius);
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  color: var(--text-primary);
+  transition: all var(--transition-normal);
+  line-height: 1.5;
+  backdrop-filter: blur(10px);
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--border-hover);
+  background: var(--bg-input-focus);
+  box-shadow: var(--shadow-focus);
+}
+
+.input-field::placeholder {
+  color: var(--text-placeholder);
+  font-style: normal;
+}
+
+.input-field:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.input-textarea {
+  resize: none;
+  height: 70px;
+  overflow-y: auto;
+}
+
+/* Input Group - for grouping related inputs with minimal spacing */
+.input-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+/* Compact input variant for password */
+.input-compact .input-field {
+  padding: var(--spacing-sm) var(--spacing-md);
+}
+
+.input-compact .input-label {
+  margin-bottom: 2px;
+}
+
+/* Legacy class names for backward compatibility */
+.seed-phrase-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.seed-phrase-input {
+  width: 100%;
+  padding: var(--spacing-md);
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  border-radius: var(--border-radius);
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  color: var(--text-primary);
+  resize: none;
+  height: 80px;
+  transition: all var(--transition-normal);
+  line-height: 1.5;
+  backdrop-filter: blur(10px);
+  overflow-y: auto;
+}
+
+.seed-phrase-input:focus {
+  outline: none;
+  border-color: var(--border-hover);
+  background: var(--bg-input-focus);
+  box-shadow: var(--shadow-focus);
+}
+
+.seed-phrase-input::placeholder {
+  color: var(--text-placeholder);
+  font-style: normal;
+}
+
+/* ============================================
+   Button Component
+   ============================================ */
+.button-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  align-items: stretch;
+}
+
+.btn {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--border-radius);
+  font-family: var(--font-family-sans);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  position: relative;
+  background: transparent;
+  width: 100%;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  color: var(--text-primary);
+  border-color: var(--border-focus);
+  background: var(--bg-button-primary);
+}
+
+.btn-primary:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: var(--bg-button-primary-hover);
+  color: var(--text-primary);
+}
+
+.btn-primary:active:not(:disabled) {
+  background: var(--bg-button-primary-active);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.btn-text {
+  color: rgba(255, 255, 255, 0.5);
+  border: none;
+  background: transparent;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  text-transform: none;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.2);
+  text-underline-offset: 4px;
+}
+
+.btn-text:hover:not(:disabled) {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration-color: rgba(255, 255, 255, 0.4);
+  background: transparent;
+}
+
+.btn-text:active:not(:disabled) {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Hide scrollbar but keep scrolling functionality */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+  width: 0;
+  height: 0;
+}
+
+/* Hide number input spinner arrows */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Spinner animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

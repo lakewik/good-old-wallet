@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "good-old-wallet",
+  "version": "1.0.0",
+  "description": "A simple wallet from the Good Old Days, no chain fragmentation in sight, just tokens on Ethereum.",
+  "icons": {},
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {}
+  },
+  "content_scripts": [],
+  "web_accessible_resources": [],
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://595b85c58418.ngrok-free.app/*"
+  ]
+}

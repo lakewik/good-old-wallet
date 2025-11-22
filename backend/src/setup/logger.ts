@@ -1,5 +1,11 @@
 type LogLevel = "debug" | "info" | "warn" | "error";
 
+// ANSI color codes
+const colors = {
+  green: "\x1b[32m",
+  reset: "\x1b[0m",
+};
+
 class Logger {
   private logLevel: LogLevel;
 
@@ -12,14 +18,16 @@ class Logger {
     return levels.indexOf(level) >= levels.indexOf(this.logLevel);
   }
 
-  private formatMessage(level: LogLevel, message: string, data?: any): string {
+  private formatMessage(level: LogLevel, message: string, data?: any, useColor?: string): string {
     const timestamp = new Date().toISOString();
     const prefix = `[${timestamp}] [${level.toUpperCase()}]`;
+    const colorCode = useColor || "";
+    const resetCode = useColor ? colors.reset : "";
     
     if (data !== undefined) {
-      return `${prefix} ${message} ${JSON.stringify(data, null, 2)}`;
+      return `${colorCode}${prefix} ${message} ${JSON.stringify(data, null, 2)}${resetCode}`;
     }
-    return `${prefix} ${message}`;
+    return `${colorCode}${prefix} ${message}${resetCode}`;
   }
 
   debug(message: string, data?: any): void {
@@ -31,6 +39,12 @@ class Logger {
   info(message: string, data?: any): void {
     if (this.shouldLog("info")) {
       console.info(this.formatMessage("info", message, data));
+    }
+  }
+
+  success(message: string, data?: any): void {
+    if (this.shouldLog("info")) {
+      console.info(this.formatMessage("info", message, data, colors.green));
     }
   }
 
