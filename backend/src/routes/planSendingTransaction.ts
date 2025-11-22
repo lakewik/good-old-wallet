@@ -42,34 +42,42 @@ function parseAmount(amount: string, decimals: number): bigint {
 
 /**
  * Serialize BigInt values in the plan to strings for JSON response
+ * Always returns all legs in a consistent format
  */
-function serializePlan(plan: UsdcSendPlan | null): any {
+function serializePlan(plan: UsdcSendPlan | null, requestedAmount: bigint): any {
   if (!plan) {
     return null;
   }
 
   if (plan.type === "single") {
+    // For single-chain, create a legs array with one leg
+    const leg = {
+      chainId: plan.quote.chainId,
+      chainName: CHAINS[plan.quote.chainId].name,
+      amountUsdc: requestedAmount.toString(),
+      gasCostUsdc: plan.quote.gasCostUsdc.toString(),
+    };
+
     return {
       type: "single",
-      quote: {
-        chainId: plan.quote.chainId,
-        chainName: CHAINS[plan.quote.chainId].name,
-        gasCostUsdc: plan.quote.gasCostUsdc.toString(),
-      },
+      legs: [leg],
+      totalAmount: requestedAmount.toString(),
+      totalGasCostUsdc: plan.quote.gasCostUsdc.toString(),
     };
   } else {
+    // For multi-chain, return all legs
+    const legs = plan.plan.legs.map((leg) => ({
+      chainId: leg.chainId,
+      chainName: CHAINS[leg.chainId].name,
+      amountUsdc: leg.amountUsdc.toString(),
+      gasCostUsdc: leg.gasCostUsdc.toString(),
+    }));
+
     return {
       type: "multi",
-      plan: {
-        legs: plan.plan.legs.map((leg) => ({
-          chainId: leg.chainId,
-          chainName: CHAINS[leg.chainId].name,
-          amountUsdc: leg.amountUsdc.toString(),
-          gasCostUsdc: leg.gasCostUsdc.toString(),
-        })),
-        totalAmount: plan.plan.totalAmount.toString(),
-        totalGasCostUsdc: plan.plan.totalGasCostUsdc.toString(),
-      },
+      legs: legs,
+      totalAmount: plan.plan.totalAmount.toString(),
+      totalGasCostUsdc: plan.plan.totalGasCostUsdc.toString(),
     };
   }
 }
@@ -93,9 +101,48 @@ function readRequestBody(req: http.IncomingMessage): Promise<string> {
 }
 
 /**
- * POST /plan-sending-transaction
- * Accepts source address, destination address, amount, and token name
- * Returns the planning result for sending USDC
+ * @swagger
+ * /plan-sending-transaction:
+ *   post:
+ *     summary: Plan a sending transaction
+ *     description: Creates an optimal plan (single-chain or multi-chain) for sending USDC tokens
+ *     tags: [Planning]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/PlanRequest'
+ *           example:
+ *             sourceAddress: "0x13190e7028c5e7e70f87efe08a973c330b09f458"
+ *             destinationAddress: "0x0A088759743B403eFB2e2F766f77Ec961f185e0f"
+ *             amount: "100.5"
+ *             tokenName: "USDC"
+ *     responses:
+ *       200:
+ *         description: Successfully created plan
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PlanResponse'
+ *       400:
+ *         description: Invalid request (missing fields, invalid address, unsupported token, etc.)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       405:
+ *         description: Method not allowed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 export async function handlePlanSendingTransactionRequest(
   req: http.IncomingMessage,
@@ -219,7 +266,8 @@ export async function handlePlanSendingTransactionRequest(
     );
 
     // Serialize the plan (convert BigInt to strings)
-    const serializedPlan = serializePlan(plan);
+    // Pass the requested amount so we can include it in single-chain plans
+    const serializedPlan = serializePlan(plan, amountUsdc);
 
     const response: PlanResponse = {
       success: true,

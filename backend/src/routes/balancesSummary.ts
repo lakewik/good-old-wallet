@@ -114,8 +114,40 @@ function isValidAddress(address: string): address is Address {
 }
 
 /**
- * GET /balancesSummary/:address
- * Returns summarized balances across all chains for a given address
+ * @swagger
+ * /balancesSummary/{address}:
+ *   get:
+ *     summary: Get balances summary
+ *     description: Returns a summary of balances across all chains for a given address (similar to /assets endpoint)
+ *     tags: [Assets]
+ *     parameters:
+ *       - in: path
+ *         name: address
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^0x[a-fA-F0-9]{40}$'
+ *         description: Ethereum wallet address
+ *         example: "0x13190e7028c5e7e70f87efe08a973c330b09f458"
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved balances summary
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SummarizedAmountsResponse'
+ *       400:
+ *         description: Invalid address format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 export async function handleBalancesSummaryRequest(
   req: http.IncomingMessage,
