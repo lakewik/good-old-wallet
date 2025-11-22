@@ -2,7 +2,7 @@ import "./setup/config.js"; // Load environment variables
 import http from "http";
 import url from "url";
 import { logger } from "./setup/logger.js";
-import { handleAssetsRequest, handleVerifyRequest, handleSettleRequest, handleBalancesSummaryRequest } from "./routes/index.js";
+import { handleAssetsRequest, handleVerifyRequest, handleSettleRequest, handleBalancesSummaryRequest, handlePlanRequest } from "./routes/index.js";
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 7000;
 
@@ -68,6 +68,12 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Plan endpoint
+  if (pathname === "/plan") {
+    await handlePlanRequest(req, res);
+    return;
+  }
+
   // 404 for all other routes
   res.writeHead(404, { "Content-Type": "application/json" });
   res.end(
@@ -80,6 +86,7 @@ const server = http.createServer(async (req, res) => {
         "GET /balancesSummary/:address",
         "POST /verify",
         "POST /settle",
+        "POST /plan",
       ],
     }),
   );
@@ -112,6 +119,7 @@ server.listen(PORT, "localhost", () => {
       "GET /balancesSummary/:address",
       "POST /verify",
       "POST /settle",
+      "POST /plan",
     ],
   });
   console.log(`🚀 Server running on http://localhost:${PORT}`);
@@ -120,6 +128,7 @@ server.listen(PORT, "localhost", () => {
   console.log(`📈 Balances Summary: http://localhost:${PORT}/balancesSummary/:address`);
   console.log(`✅ Verify: http://localhost:${PORT}/verify`);
   console.log(`🔒 Settle: http://localhost:${PORT}/settle`);
+  console.log(`📋 Plan: http://localhost:${PORT}/plan`);
 });
 
 // Graceful shutdown
