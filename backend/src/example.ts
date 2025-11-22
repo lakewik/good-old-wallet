@@ -97,10 +97,45 @@ async function example1_AutomaticPlanning() {
 
     // You would execute transfers on each chain here - we can use EIL here for sign one tx for multiple chains
     // NOTE :: this should be done on the wallet frontend side the signing of the transaction
-    // plan.plan.legs.forEach(leg => {
-    //
-    //   executeTransfer(leg.chainId, fromWallet, toWallet, leg.amountUsdc);
-    // });
+    
+    // Example: Build EIL payload for multi-chain execution
+    // This allows signing one transaction that executes on multiple chains
+    console.log("\n   📦 EIL Payload Construction:");
+    console.log("   To execute this multi-chain plan with EIL:");
+    console.log("   1. Use buildEILPayload() to create CrossChainBuilder");
+    console.log("   2. Each leg becomes a batch in the builder");
+    console.log("   3. Call builder.getUserOpsToSign() to get UserOperations");
+    console.log("   4. Sign all UserOperations with the wallet");
+    console.log("   5. Execute via CrossChainExecutor");
+    console.log("\n   Example EIL payload structure:");
+    const eilPayloadExample = {
+      batches: plan.plan.legs.map((leg, idx) => ({
+        chainId: leg.chainId,
+        chainName: CHAINS[leg.chainId].name,
+        actions: [
+          {
+            type: "transfer",
+            token: "USDC",
+            recipient: toWallet,
+            amount: leg.amountUsdc.toString(),
+          },
+        ],
+      })),
+    };
+    console.log(JSON.stringify(eilPayloadExample, null, 2));
+    
+    // Uncomment to actually build EIL payload (requires EIL SDK setup):
+    // import { buildEILPayload } from "./services/eilBuilder.js";
+    // import { CrossChainSdk } from "@eil-protocol/sdk";
+    // const sdk = new CrossChainSdk(/* your config */);
+    // const eilPayload = await buildEILPayload(
+    //   plan.plan,
+    //   fromWallet,
+    //   toWallet,
+    //   sdk.getNetworkEnv()
+    // );
+    // const userOps = await eilPayload.builder.getUserOpsToSign();
+    // // Sign userOps with wallet, then execute
   }
 }
 

@@ -20,6 +20,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@eil-protocol/accounts": "^0.1.2",
+    "@eil-protocol/sdk": "^0.1.2",
     "dotenv": "^16.4.5",
     "ethers": "^6.13.0",
     "swagger-jsdoc": "^6.2.8",

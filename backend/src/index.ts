@@ -10,4 +10,5 @@ export * from "./setup/providers.js";
 export * from "./handlers/balances.js";
 export * from "./handlers/gas.js";
 export * from "./services/orchestrator.js";
+export * from "./services/eilBuilder.js";
 export * from "./setup/logger.js";

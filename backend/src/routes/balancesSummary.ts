@@ -3,23 +3,8 @@ import { logger } from "../setup/logger.js";
 import { getNativeBalance, getErc20Balance } from "../handlers/balances.js";
 import { CHAINS, type Address, ChainId } from "../index.js";
 
-interface ChainBalance {
-  chainId: number;
-  chainName: string;
-  native: {
-    symbol: string;
-    balance: string; // in wei
-    balanceFormatted: string; // human readable
-  };
-  usdc: {
-    balance: string; // in smallest unit (6 decimals)
-    balanceFormatted: string; // human readable
-  };
-}
-
 interface BalancesSummaryResponse {
   address: Address;
-  chains: ChainBalance[];
   totals: {
     native: {
       totalWei: string;
@@ -31,6 +16,7 @@ interface BalancesSummaryResponse {
       totalFormatted: string;
     };
   };
+  totalPortfolioValueUSD: string;
 }
 
 function formatBalance(balance: bigint, decimals: number): string {
@@ -51,8 +37,21 @@ function formatBalance(balance: bigint, decimals: number): string {
   return `${whole}.${trimmed}`;
 }
 
+/**
+ * Get ETH price in USD (simplified - in production, use a price API)
+ * For now, using a placeholder. In production, fetch from CoinGecko, CoinMarketCap, etc.
+ */
+async function getEthPriceUSD(): Promise<number> {
+  // TODO: Replace with actual price API call
+  // Example: const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+  // return response.json().ethereum.usd;
+  
+  // Placeholder: return a default ETH price
+  // In production, cache this value and update periodically
+  return 2500; // $2500 per ETH (example)
+}
+
 async function getBalancesSummary(address: Address): Promise<BalancesSummaryResponse> {
-  const chains: ChainBalance[] = [];
   let totalNativeWei = 0n;
   let totalUsdcSmallestUnit = 0n;
   let nativeSymbol = "ETH"; // default
@@ -63,38 +62,27 @@ async function getBalancesSummary(address: Address): Promise<BalancesSummaryResp
 
     // Get native balance
     const nativeBalance = getNativeBalance(chainId, address);
-    const nativeFormatted = formatBalance(nativeBalance, chain.native.decimals);
     totalNativeWei += nativeBalance;
     nativeSymbol = chain.native.symbol;
 
     // Get USDC balance
-    let usdcBalance = 0n;
-    let usdcFormatted = "0";
     const usdcToken = chain.commonTokens.USDC;
     if (usdcToken) {
-      usdcBalance = getErc20Balance(chainId, usdcToken, address);
-      usdcFormatted = formatBalance(usdcBalance, usdcToken.decimals);
+      const usdcBalance = getErc20Balance(chainId, usdcToken, address);
       totalUsdcSmallestUnit += usdcBalance;
     }
-
-    chains.push({
-      chainId: chainId,
-      chainName: chain.name,
-      native: {
-        symbol: chain.native.symbol,
-        balance: nativeBalance.toString(),
-        balanceFormatted: nativeFormatted,
-      },
-      usdc: {
-        balance: usdcBalance.toString(),
-        balanceFormatted: usdcFormatted,
-      },
-    });
   }
+
+  // Calculate total portfolio value in USD
+  const ethPriceUSD = await getEthPriceUSD();
+  const totalEth = Number(totalNativeWei) / Math.pow(10, 18);
+  const totalUsdc = Number(totalUsdcSmallestUnit) / Math.pow(10, 6);
+  
+  // Total value = (ETH amount * ETH price) + USDC amount
+  const totalPortfolioValueUSD = (totalEth * ethPriceUSD) + totalUsdc;
 
   return {
     address,
-    chains,
     totals: {
       native: {
         totalWei: totalNativeWei.toString(),
@@ -106,6 +94,7 @@ async function getBalancesSummary(address: Address): Promise<BalancesSummaryResp
         totalFormatted: formatBalance(totalUsdcSmallestUnit, 6), // USDC has 6 decimals
       },
     },
+    totalPortfolioValueUSD: totalPortfolioValueUSD.toFixed(2),
   };
 }
 
@@ -118,7 +107,7 @@ function isValidAddress(address: string): address is Address {
  * /balancesSummary/{address}:
  *   get:
  *     summary: Get balances summary
- *     description: Returns a summary of balances across all chains for a given address (similar to /assets endpoint)
+ *     description: Returns aggregated balances totals across all chains and total portfolio value in USD
  *     tags: [Assets]
  *     parameters:
  *       - in: path
@@ -135,7 +124,39 @@ function isValidAddress(address: string): address is Address {
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/SummarizedAmountsResponse'
+ *               type: object
+ *               properties:
+ *                 address:
+ *                   type: string
+ *                   example: "0x13190e7028c5e7e70f87efe08a973c330b09f458"
+ *                 totals:
+ *                   type: object
+ *                   properties:
+ *                     native:
+ *                       type: object
+ *                       properties:
+ *                         totalWei:
+ *                           type: string
+ *                           example: "5300000000000000000"
+ *                         totalFormatted:
+ *                           type: string
+ *                           example: "5.3"
+ *                         symbol:
+ *                           type: string
+ *                           example: "ETH"
+ *                     usdc:
+ *                       type: object
+ *                       properties:
+ *                         totalSmallestUnit:
+ *                           type: string
+ *                           example: "400000000"
+ *                         totalFormatted:
+ *                           type: string
+ *                           example: "400"
+ *                 totalPortfolioValueUSD:
+ *                   type: string
+ *                   description: Total portfolio value in USD (ETH value + USDC value)
+ *                   example: "13650.00"
  *       400:
  *         description: Invalid address format
  *         content:
