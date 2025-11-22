@@ -341,7 +341,7 @@ export default function PortfolioScreen({
               tokenList.push({
                 image: "",
                 name: "Ethereum",
-                symbol: ethTotal.symbol || "ETH",
+                symbol: "ETH",
                 amount: ethTotal.totalFormatted,
                 valueUSD: `$${ethValueUSD.toLocaleString("en-US", {
                   minimumFractionDigits: 2,

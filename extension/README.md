@@ -1,15 +1,15 @@
 # good-old-wallet
 
-To install dependencies:
-
 ```bash
 bun install
 ```
 
-To run:
-
 ```bash
-bun run index.ts
+bun run build
 ```
 
-This project was created using `bun init` in bun v1.3.1. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+Load unpacked chrome extension
+
+After every change you wanna test do `bun run build` and reload the extension in the extensions tab.
+
+Have fun

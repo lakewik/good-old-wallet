@@ -19,6 +19,8 @@ export interface InputProps {
   rows?: number; // Only applies when type is "textarea"
   disabled?: boolean;
   className?: string;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  autoFocus?: boolean;
 }
 
 export interface LogoProps {

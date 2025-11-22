@@ -10,10 +10,8 @@ export interface BalancesSummaryResponse {
   address: string;
   totals: {
     [tokenSymbol: string]: {
-      totalWei?: string;
+      totalSmallestUnit: string;
       totalFormatted: string;
-      symbol?: string;
-      totalSmallestUnit?: string;
     };
   };
   totalPortfolioValueUSD: string;
