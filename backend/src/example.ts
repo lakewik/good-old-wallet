@@ -66,7 +66,7 @@ async function example1_AutomaticPlanning() {
   const plan = await planUsdcSend(fromWallet, toWallet, amountUsdc);
 
   console.log("\n📋 Plan Details:");
-  console.log(JSON.stringify(plan, (key, value) => 
+  console.log(JSON.stringify(plan, (key, value) =>
     typeof value === 'bigint' ? value.toString() : value, 2));
 
   if (!plan) {
@@ -97,7 +97,7 @@ async function example1_AutomaticPlanning() {
 
     // You would execute transfers on each chain here - we can use EIL here for sign one tx for multiple chains
     // NOTE :: this should be done on the wallet frontend side the signing of the transaction
-    
+
     // Example: Build EIL payload for multi-chain execution
     // This allows signing one transaction that executes on multiple chains
     console.log("\n   📦 EIL Payload Construction:");
@@ -123,19 +123,126 @@ async function example1_AutomaticPlanning() {
       })),
     };
     console.log(JSON.stringify(eilPayloadExample, null, 2));
-    
+
+    // Example: Build EIL payload and sign with private key
     // Uncomment to actually build EIL payload (requires EIL SDK setup):
-    // import { buildEILPayload } from "./services/eilBuilder.js";
-    // import { CrossChainSdk } from "@eil-protocol/sdk";
-    // const sdk = new CrossChainSdk(/* your config */);
-    // const eilPayload = await buildEILPayload(
-    //   plan.plan,
-    //   fromWallet,
-    //   toWallet,
-    //   sdk.getNetworkEnv()
-    // );
-    // const userOps = await eilPayload.builder.getUserOpsToSign();
-    // // Sign userOps with wallet, then execute
+    /*
+    import { buildEILPayload } from "./services/eilBuilder.js";
+    import { CrossChainSdk, defaultCrossChainConfig } from "@eil-protocol/sdk";
+    import { createPublicClient, http } from "viem";
+    import { privateKeyToAccount } from "viem/accounts";
+    import { oneSignatureSignUserOps } from "@eil-protocol/sdk/dist/sdk/account/accountUtils.js";
+    import type { ChainInfo } from "@eil-protocol/sdk/dist/sdk/config/index.js";
+
+    // Example private key (NEVER use this in production - generate a new one!)
+    // This is a well-known test private key from Hardhat - for demonstration only
+    // In production, use: const privateKey = process.env.PRIVATE_KEY as `0x${string}`;
+    const examplePrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as `0x${string}`;
+
+    // Create account from private key
+    const account = privateKeyToAccount(examplePrivateKey);
+    console.log(`   Using account: ${account.address}`);
+
+    // Option 1: Use default EIL config (simpler, but may need to override chainInfos)
+    // const sdk = new CrossChainSdk(defaultCrossChainConfig);
+
+    // Option 2: Create custom config with your RPC URLs and EIL contract addresses
+    // Create PublicClients for each chain using your RPC URLs
+    const ethereumClient = createPublicClient({
+      chain: {
+        id: 1,
+        name: "Ethereum",
+        network: "homestead",
+        nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+        rpcUrls: { default: { http: [CHAINS[ChainId.ETHEREUM].rpcUrl] } },
+      },
+      transport: http(),
+    });
+
+    const baseClient = createPublicClient({
+      chain: {
+        id: 8453,
+        name: "Base",
+        network: "base",
+        nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+        rpcUrls: { default: { http: [CHAINS[ChainId.BASE].rpcUrl] } },
+      },
+      transport: http(),
+    });
+
+    // Create ChainInfo array for EIL config
+    // Note: Paymaster addresses can be omitted - they will be automatically added
+    // by ensurePaymasterConfig() if missing. However, you can specify them explicitly:
+    const chainInfos: ChainInfo[] = [
+      {
+        chainId: BigInt(ChainId.ETHEREUM),
+        publicClient: ethereumClient,
+        // paymasterAddress is optional - will be auto-added if missing
+        paymasterAddress: "0x73Ca37d21Bb665df9899339ad31897747D782a7C" as `0x${string}`, // EIL paymaster on Ethereum
+        entryPointAddress: "0x433709009B8330FDa32311DF1C2AFA402eD8D009" as `0x${string}`, // EIL entry point
+        bundlerUrl: "https://vnet.erc4337.io/bundler/1", // ERC-4337 bundler for Ethereum
+      },
+      {
+        chainId: BigInt(ChainId.BASE),
+        publicClient: baseClient,
+        // paymasterAddress is optional - will be auto-added if missing
+        // This enables gas sponsorship on Base even if user has no ETH there
+        paymasterAddress: "0xDfA767774B04046e2Ad3aFDB6474475De6F7be1C" as `0x${string}`, // EIL paymaster on Base
+        entryPointAddress: "0x433709009B8330FDa32311DF1C2AFA402eD8D009" as `0x${string}`, // EIL entry point
+        bundlerUrl: "https://vnet.erc4337.io/bundler/8453", // ERC-4337 bundler for Base
+      },
+    ];
+    
+    // Create EIL SDK configuration
+    // Note: sourcePaymaster is optional - will be auto-added by ensurePaymasterConfig()
+    const eilConfig = {
+      expireTimeSeconds: 3600, // 1 hour - how long the UserOps are valid
+      execTimeoutSeconds: 1800, // 30 minutes - execution timeout
+      chainInfos: chainInfos,
+      // sourcePaymaster is optional - will be automatically added if missing
+      // This enables gas sponsorship for source chains
+    };
+    
+    // Initialize EIL SDK
+    const sdk = new CrossChainSdk(eilConfig);
+    
+    // Build EIL payload
+    // ensurePaymasterConfig() will automatically add paymaster configuration if missing
+    // This ensures gas sponsorship works even if paymaster wasn't explicitly configured
+    const eilPayload = await buildEILPayload(
+      plan.plan,
+      fromWallet,
+      toWallet,
+      sdk.getNetworkEnv()
+    );
+
+    // Get UserOperations to sign
+    const userOps = await eilPayload.builder.getUserOpsToSign();
+    console.log(`\n   📝 UserOperations to sign: ${userOps.length}`);
+
+    // Sign UserOperations with the private key
+    // This uses EIL's cross-chain signature format (EIP-712)
+    // One signature can cover all chains in the batch
+    const signedUserOps = await oneSignatureSignUserOps(account, userOps);
+
+    console.log("\n   ✅ Signed UserOperations:");
+    console.log(`   Count: ${signedUserOps.length}`);
+    signedUserOps.forEach((op, idx) => {
+      console.log(`   ${idx + 1}. Chain ${op.chainId}: ${op.sender}`);
+      console.log(`      Nonce: ${op.nonce}`);
+      console.log(`      Has signature: ${!!op.signature}`);
+    });
+
+    // Now you can execute the signed UserOperations
+    // Option A: Use the builder's buildAndSign (requires smart account setup)
+    // const executor = await eilPayload.builder.buildAndSign();
+    // await executor.execute();
+
+    // Option B: Manually send each signed UserOp to its chain's bundler
+    // for (const signedOp of signedUserOps) {
+    //   await sendUserOperation(signedOp, bundlerUrl);
+    // }
+
   }
 }
 
