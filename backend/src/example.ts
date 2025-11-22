@@ -40,7 +40,7 @@ async function example0_LoadBalancesFromJson() {
   // Format: { [chainId]: { [wallet]: { [tokenAddress]: "balance" } } }
   // Only include chains that are actually configured in CHAINS
   const balancesFromApi: Record<number, Record<string, Record<string, string>>> = {};
-  
+
   for (const [chainIdStr, chain] of Object.entries(CHAINS)) {
     const chainId = Number(chainIdStr) as ChainId;
     balancesFromApi[chainId] = {
@@ -65,7 +65,9 @@ async function example1_AutomaticPlanning() {
 
   const plan = await planUsdcSend(fromWallet, toWallet, amountUsdc);
 
-  console.log(plan)
+  console.log("\n📋 Plan Details:");
+  console.log(JSON.stringify(plan, (key, value) => 
+    typeof value === 'bigint' ? value.toString() : value, 2));
 
   if (!plan) {
     console.log("❌ No viable plan found. Insufficient balance across all chains.");
@@ -94,6 +96,7 @@ async function example1_AutomaticPlanning() {
     });
 
     // You would execute transfers on each chain here - we can use EIL here for sign one tx for multiple chains
+    // NOTE :: this should be done on the wallet frontend side the signing of the transaction
     // plan.plan.legs.forEach(leg => {
     //
     //   executeTransfer(leg.chainId, fromWallet, toWallet, leg.amountUsdc);

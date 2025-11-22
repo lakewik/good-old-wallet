@@ -1,7 +1,7 @@
 import http from "http";
 import { logger } from "../setup/logger.js";
 import { getNativeBalance, getErc20Balance } from "../handlers/balances.js";
-import { ChainId, CHAINS, type Address } from "../index.js";
+import { CHAINS, type Address, ChainId } from "../index.js";
 
 interface ChainBalance {
   chainId: number;
@@ -17,7 +17,7 @@ interface ChainBalance {
   };
 }
 
-interface SummarizedAmountsResponse {
+interface BalancesSummaryResponse {
   address: Address;
   chains: ChainBalance[];
   totals: {
@@ -51,7 +51,7 @@ function formatBalance(balance: bigint, decimals: number): string {
   return `${whole}.${trimmed}`;
 }
 
-async function getSummarizedAmounts(address: Address): Promise<SummarizedAmountsResponse> {
+async function getBalancesSummary(address: Address): Promise<BalancesSummaryResponse> {
   const chains: ChainBalance[] = [];
   let totalNativeWei = 0n;
   let totalUsdcSmallestUnit = 0n;
@@ -114,10 +114,10 @@ function isValidAddress(address: string): address is Address {
 }
 
 /**
- * GET /assets/:address
+ * GET /balancesSummary/:address
  * Returns summarized balances across all chains for a given address
  */
-export async function handleAssetsRequest(
+export async function handleBalancesSummaryRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   address: string
@@ -134,11 +134,11 @@ export async function handleAssetsRequest(
   }
 
   try {
-    const summarizedAmounts = await getSummarizedAmounts(address as Address);
+    const summary = await getBalancesSummary(address as Address);
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify(summarizedAmounts, null, 2));
+    res.end(JSON.stringify(summary, null, 2));
   } catch (error) {
-    logger.error("Error getting summarized amounts", error);
+    logger.error("Error getting balances summary", error);
     res.writeHead(500, { "Content-Type": "application/json" });
     res.end(
       JSON.stringify({
@@ -148,4 +148,3 @@ export async function handleAssetsRequest(
     );
   }
 }
-

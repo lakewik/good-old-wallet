@@ -2,119 +2,9 @@ import "./setup/config.js"; // Load environment variables
 import http from "http";
 import url from "url";
 import { logger } from "./setup/logger.js";
-import { handleAssetsRequest, handleVerifyRequest, handleSettleRequest } from "./routes/index.js";
+import { handleAssetsRequest, handleVerifyRequest, handleSettleRequest, handleBalancesSummaryRequest } from "./routes/index.js";
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 7000;
-
-interface ChainBalance {
-  chainId: number;
-  chainName: string;
-  native: {
-    symbol: string;
-    balance: string; // in wei
-    balanceFormatted: string; // human readable
-  };
-  usdc: {
-    balance: string; // in smallest unit (6 decimals)
-    balanceFormatted: string; // human readable
-  };
-}
-
-interface SummarizedAmountsResponse {
-  address: Address;
-  chains: ChainBalance[];
-  totals: {
-    native: {
-      totalWei: string;
-      totalFormatted: string;
-      symbol: string;
-    };
-    usdc: {
-      totalSmallestUnit: string;
-      totalFormatted: string;
-    };
-  };
-}
-
-function formatBalance(balance: bigint, decimals: number): string {
-  if (balance === 0n) {
-    return "0";
-  }
-
-  const divisor = BigInt(10 ** decimals);
-  const whole = balance / divisor;
-  const remainder = balance % divisor;
-
-  if (remainder === 0n) {
-    return whole.toString();
-  }
-
-  const remainderStr = remainder.toString().padStart(decimals, "0");
-  const trimmed = remainderStr.replace(/0+$/, "");
-  return `${whole}.${trimmed}`;
-}
-
-async function getSummarizedAmounts(address: Address): Promise<SummarizedAmountsResponse> {
-  const chains: ChainBalance[] = [];
-  let totalNativeWei = 0n;
-  let totalUsdcSmallestUnit = 0n;
-  let nativeSymbol = "ETH"; // default
-
-  // Only iterate over chains that are actually configured in CHAINS
-  for (const [chainIdStr, chain] of Object.entries(CHAINS)) {
-    const chainId = Number(chainIdStr) as ChainId;
-
-    // Get native balance
-    const nativeBalance = getNativeBalance(chainId, address);
-    const nativeFormatted = formatBalance(nativeBalance, chain.native.decimals);
-    totalNativeWei += nativeBalance;
-    nativeSymbol = chain.native.symbol;
-
-    // Get USDC balance
-    let usdcBalance = 0n;
-    let usdcFormatted = "0";
-    const usdcToken = chain.commonTokens.USDC;
-    if (usdcToken) {
-      usdcBalance = getErc20Balance(chainId, usdcToken, address);
-      usdcFormatted = formatBalance(usdcBalance, usdcToken.decimals);
-      totalUsdcSmallestUnit += usdcBalance;
-    }
-
-    chains.push({
-      chainId: chainId,
-      chainName: chain.name,
-      native: {
-        symbol: chain.native.symbol,
-        balance: nativeBalance.toString(),
-        balanceFormatted: nativeFormatted,
-      },
-      usdc: {
-        balance: usdcBalance.toString(),
-        balanceFormatted: usdcFormatted,
-      },
-    });
-  }
-
-  return {
-    address,
-    chains,
-    totals: {
-      native: {
-        totalWei: totalNativeWei.toString(),
-        totalFormatted: formatBalance(totalNativeWei, 18), // Assuming all native tokens are 18 decimals
-        symbol: nativeSymbol,
-      },
-      usdc: {
-        totalSmallestUnit: totalUsdcSmallestUnit.toString(),
-        totalFormatted: formatBalance(totalUsdcSmallestUnit, 6), // USDC has 6 decimals
-      },
-    },
-  };
-}
-
-function isValidAddress(address: string): address is Address {
-  return /^0x[a-fA-F0-9]{40}$/.test(address);
-}
 
 const server = http.createServer(async (req, res) => {
   // Enable CORS
@@ -158,6 +48,14 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Balances Summary endpoint
+  const balancesSummaryMatch = pathname?.match(/^\/balancesSummary\/(.+)$/);
+  if (balancesSummaryMatch && req.method === "GET") {
+    const address = balancesSummaryMatch[1] as string;
+    await handleBalancesSummaryRequest(req, res, address);
+    return;
+  }
+
   // Verify endpoint
   if (pathname === "/verify") {
     await handleVerifyRequest(req, res);
@@ -179,6 +77,7 @@ const server = http.createServer(async (req, res) => {
       availableRoutes: [
         "GET /health",
         "GET /assets/:address",
+        "GET /balancesSummary/:address",
         "POST /verify",
         "POST /settle",
       ],
@@ -210,6 +109,7 @@ server.listen(PORT, "localhost", () => {
     endpoints: [
       "GET /health",
       "GET /assets/:address",
+      "GET /balancesSummary/:address",
       "POST /verify",
       "POST /settle",
     ],
@@ -217,6 +117,7 @@ server.listen(PORT, "localhost", () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`💰 Assets: http://localhost:${PORT}/assets/:address`);
+  console.log(`📈 Balances Summary: http://localhost:${PORT}/balancesSummary/:address`);
   console.log(`✅ Verify: http://localhost:${PORT}/verify`);
   console.log(`🔒 Settle: http://localhost:${PORT}/settle`);
 });
