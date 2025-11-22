@@ -10,7 +10,7 @@ import type { EncryptedVault } from "./WalletVault";
 
 export async function testSigningReference(
   password: string,
-  encryptedVault: EncryptedVault,
+  encryptedVault: EncryptedVault
 ): Promise<{
   address: string;
   signature: string;
@@ -49,7 +49,7 @@ export async function testSigningReference(
           message: testMessage,
           verified,
         };
-      },
+      }
     );
 
     return result;

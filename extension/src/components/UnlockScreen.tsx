@@ -81,6 +81,12 @@ export default function UnlockScreen() {
           placeholder={PASSWORD_PLACEHOLDER}
           type="password"
           disabled={isLoading}
+          autoFocus={true}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !isLoading && password.trim()) {
+              handleUnlock();
+            }
+          }}
         />
 
         {error && (

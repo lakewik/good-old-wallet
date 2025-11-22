@@ -1,10 +1,22 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Button from "./Button";
 import { PageContainer, ContentContainer } from "./Container";
 import { LOGO_PATH, LOGO_ALT } from "../constants";
 import { WalletVault } from "../utils/WalletVault";
-import { getEncryptedVault } from "../utils/storage";
+import {
+  getEncryptedVault,
+  getPendingTransactions,
+  savePendingTransactions,
+  type PendingTransaction,
+} from "../utils/storage";
 import type { EncryptedVault } from "../utils/WalletVault";
+import SendScreen from "./SendScreen";
+import PendingTransactionCard from "./PendingTransactionCard";
+import {
+  getBalancesSummary,
+  ApiError,
+} from "../utils/api";
+import { getBlockExplorerUrl } from "../utils/blockExplorers";
 
 interface PortfolioScreenProps {
   password: string;
@@ -195,14 +207,96 @@ export default function PortfolioScreen({
     useState<string>("$0.00");
   const [tokens, setTokens] = useState<Token[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [selectedToken, setSelectedToken] = useState<Token | null>(null);
+  const [pendingTransactions, setPendingTransactions] = useState<
+    PendingTransaction[]
+  >([]);
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
+    
     loadWalletData();
+    loadPendingTransactions();
   }, []);
+
+  const loadPendingTransactions = async () => {
+    try {
+      const transactions = await getPendingTransactions();
+      
+      // Filter out transactions older than 24 hours
+      const now = Date.now();
+      const twentyFourHours = 24 * 60 * 60 * 1000;
+      const recentTransactions = transactions.filter(
+        (tx) => now - tx.createdAt < twentyFourHours,
+      );
+      
+      // Remove old transactions from storage
+      if (recentTransactions.length !== transactions.length) {
+        await savePendingTransactions(recentTransactions);
+      }
+      
+      setPendingTransactions(recentTransactions);
+      
+      // Process pending transactions - mock execution
+      recentTransactions.forEach((tx) => {
+        if (tx.status === "pending") {
+          // Check if we already set a timeout for this transaction
+          const timeoutKey = `timeout_${tx.id}`;
+          if ((window as any)[timeoutKey]) {
+            return; // Already processing
+          }
+          
+          // Mock transaction execution - succeed after 10 seconds
+          // Note: txHash should already exist since transaction was sent, we just update status
+          (window as any)[timeoutKey] = setTimeout(async () => {
+            const updated = await getPendingTransactions();
+            const txIndex = updated.findIndex((t) => t.id === tx.id);
+            if (txIndex !== -1 && updated[txIndex].status === "pending") {
+              const updatedTx = { ...updated[txIndex] };
+              updatedTx.status = "success";
+              updatedTx.subTransactions = updatedTx.subTransactions.map(
+                (subTx) => ({
+                  ...subTx,
+                  status: "success" as const,
+                  // Keep existing txHash and blockExplorerUrl
+                }),
+              );
+              updated[txIndex] = updatedTx;
+              await savePendingTransactions(updated);
+              // Filter again in case transaction is now > 24h old
+              const now2 = Date.now();
+              const filtered = updated.filter(
+                (t) => now2 - t.createdAt < twentyFourHours,
+              );
+              setPendingTransactions(filtered);
+            }
+            delete (window as any)[timeoutKey];
+          }, 10000);
+        }
+      });
+    } catch (error) {
+      console.error("Error loading pending transactions:", error);
+    }
+  };
+
+
+  const handleTransactionUpdate = async (updated: PendingTransaction) => {
+    const all = await getPendingTransactions();
+    const index = all.findIndex((t) => t.id === updated.id);
+    if (index !== -1) {
+      all[index] = updated;
+      await savePendingTransactions(all);
+      setPendingTransactions(all);
+    }
+  };
 
   const loadWalletData = async () => {
     try {
+      setError(null);
       const vault = new WalletVault();
       await vault.unlockAndExecute(
         password,
@@ -214,66 +308,89 @@ export default function PortfolioScreen({
           // Derive wallet address
           const { ethers } = await import("ethers");
           const wallet = ethers.Wallet.fromPhrase(seedPhrase);
-          setAddress(wallet.address);
+          const walletAddress = wallet.address;
+          setAddress(walletAddress);
 
-          // TODO: Fetch portfolio value and tokens from blockchain
-          // For now, using placeholder data
-          setTotalPortfolioValue("$12,345.67");
-          setTokens([
-            {
-              image: "",
-              name: "Ethereum",
-              symbol: "ETH",
-              amount: "2.5",
-              valueUSD: "$6,234.50",
-            },
-            {
-              image: "",
-              name: "USD Coin",
-              symbol: "USDC",
-              amount: "5,000.00",
-              valueUSD: "$5,000.00",
-            },
-            {
-              image: "",
-              name: "Wrapped Ethereum",
-              symbol: "WETH",
-              amount: "1.0",
-              valueUSD: "$2,491.80",
-            },
-            {
-              image: "",
-              name: "Dai Stablecoin",
-              symbol: "DAI",
-              amount: "1,000.00",
-              valueUSD: "$1,000.00",
-            },
-            {
-              image: "",
-              name: "Chainlink",
-              symbol: "LINK",
-              amount: "50.0",
-              valueUSD: "$750.00",
-            },
-            {
-              image: "",
-              name: "Uniswap",
-              symbol: "UNI",
-              amount: "100.0",
-              valueUSD: "$500.00",
-            },
-            {
-              image: "",
-              name: "Aave Token",
-              symbol: "AAVE",
-              amount: "5.0",
-              valueUSD: "$370.37",
-            },
-          ]);
+          // Fetch portfolio data from API
+          try {
+            // Fetch balances summary (contains everything we need)
+            const balancesSummary = await getBalancesSummary(walletAddress);
+            
+            // Format total portfolio value
+            const portfolioValue = parseFloat(
+              balancesSummary.totalPortfolioValueUSD,
+            );
+            setTotalPortfolioValue(
+              `$${portfolioValue.toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}`,
+            );
+
+            // Build token list from totals
+            const tokenList: Token[] = [];
+
+            // Add native token (ETH)
+            const ethTotal = balancesSummary.totals.ETH;
+            if (ethTotal && parseFloat(ethTotal.totalFormatted) > 0) {
+              // Calculate USD value for ETH (portfolio value minus USDC)
+              const usdcTotal = balancesSummary.totals.USDC;
+              const usdcValue = usdcTotal ? parseFloat(usdcTotal.totalFormatted) : 0;
+              const ethValueUSD = portfolioValue - usdcValue;
+              
+              tokenList.push({
+                image: "",
+                name: "Ethereum",
+                symbol: "ETH",
+                amount: ethTotal.totalFormatted,
+                valueUSD: `$${ethValueUSD.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}`,
+              });
+            }
+
+            // Add USDC token
+            const usdcTotal = balancesSummary.totals.USDC;
+            if (usdcTotal && parseFloat(usdcTotal.totalFormatted) > 0) {
+              const usdcValue = parseFloat(usdcTotal.totalFormatted);
+              tokenList.push({
+                image: "",
+                name: "USD Coin",
+                symbol: "USDC",
+                amount: usdcTotal.totalFormatted,
+                valueUSD: `$${usdcValue.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}`,
+              });
+            }
+
+            setTokens(tokenList);
+          } catch (apiError) {
+            console.error("Error fetching portfolio data:", apiError);
+            if (apiError instanceof ApiError) {
+              setError(
+                `Failed to load portfolio: ${apiError.message}. Please try again later.`,
+              );
+            } else {
+              setError(
+                "Failed to load portfolio data. Please try again later.",
+              );
+            }
+            // Set default empty state
+            setTotalPortfolioValue("$0.00");
+            setTokens([]);
+          }
         },
       );
     } catch (error) {
       console.error("Error loading wallet data:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load wallet. Please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -294,14 +411,17 @@ export default function PortfolioScreen({
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
   };
 
-  const handleSend = () => {
-    // Empty function for now
-    console.log("Send button clicked");
+  const handleTokenSend = (token: Token) => {
+    setSelectedToken(token);
   };
 
-  const handleTokenSend = (token: Token) => {
-    // Empty function for now
-    console.log("Send token clicked:", token);
+  const handleBackFromSend = () => {
+    setSelectedToken(null);
+    loadPendingTransactions(); // Reload pending transactions when returning
+  };
+
+  const handleCancelSend = () => {
+    setSelectedToken(null);
   };
 
   if (isLoading) {
@@ -319,6 +439,69 @@ export default function PortfolioScreen({
       >
         Loading...
       </div>
+    );
+  }
+
+  if (error && tokens.length === 0) {
+    return (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "var(--spacing-md)",
+          padding: "var(--spacing-md)",
+          color: "var(--text-secondary)",
+          background: "var(--bg-primary)",
+        }}
+      >
+        <div
+          style={{
+            padding: "var(--spacing-md)",
+            background: "rgba(255, 68, 68, 0.1)",
+            border: "1px solid rgba(255, 68, 68, 0.3)",
+            borderRadius: "var(--border-radius)",
+            color: "#ff4444",
+            fontSize: "12px",
+            textAlign: "center",
+            maxWidth: "300px",
+          }}
+        >
+          {error}
+        </div>
+        <button
+          onClick={loadWalletData}
+          style={{
+            padding: "var(--spacing-sm) var(--spacing-md)",
+            background: "var(--bg-button-primary)",
+            border: "1px solid var(--border-focus)",
+            borderRadius: "var(--border-radius)",
+            color: "var(--text-primary)",
+            fontSize: "12px",
+            fontFamily: "var(--font-family-sans)",
+            cursor: "pointer",
+            fontWeight: 600,
+          }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  // Show send screen if a token is selected
+  if (selectedToken) {
+    return (
+      <SendScreen
+        token={selectedToken}
+        onBack={handleBackFromSend}
+        onCancel={handleCancelSend}
+        password={password}
+        encryptedVault={encryptedVault}
+      />
     );
   }
 
@@ -473,56 +656,36 @@ export default function PortfolioScreen({
             </div>
           </div>
 
-          {/* Send Button */}
-          <div style={{ width: "100%" }}>
-            <button
-              onClick={handleSend}
+          {/* Recent Transactions */}
+          {pendingTransactions.length > 0 && (
+            <div
               style={{
                 width: "100%",
-                padding: "var(--spacing-md) var(--spacing-lg)",
-                border: "1px solid var(--border-primary)",
-                borderRadius: "var(--border-radius)",
-                fontFamily: "var(--font-family-sans)",
-                fontSize: "10px",
-                fontWeight: 600,
-                cursor: "pointer",
-                letterSpacing: "0.5px",
-                textTransform: "uppercase",
-                position: "relative",
-                color: "var(--text-primary)",
-                borderColor: "var(--border-focus)",
-                background: "var(--bg-button-primary)",
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "var(--spacing-xs)",
-                transition: "all var(--transition-fast)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.35)";
-                e.currentTarget.style.background =
-                  "var(--bg-button-primary-hover)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "var(--border-focus)";
-                e.currentTarget.style.background = "var(--bg-button-primary)";
+                flexDirection: "column",
+                gap: "var(--spacing-sm)",
+                marginTop: "var(--spacing-lg)",
               }}
             >
-              <span>Send</span>
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              <div
+                style={{
+                  fontSize: "10px",
+                  color: "var(--text-muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: "1px",
+                }}
               >
-                <path d="M9 18l6-6-6-6" />
-              </svg>
-            </button>
-          </div>
+                Recent Transactions
+              </div>
+              {pendingTransactions.map((tx) => (
+                <PendingTransactionCard
+                  key={tx.id}
+                  transaction={tx}
+                  onUpdate={handleTransactionUpdate}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Tokens List */}
           <div
@@ -531,6 +694,7 @@ export default function PortfolioScreen({
               display: "flex",
               flexDirection: "column",
               gap: "var(--spacing-sm)",
+              marginTop: "var(--spacing-lg)",
             }}
           >
             <div

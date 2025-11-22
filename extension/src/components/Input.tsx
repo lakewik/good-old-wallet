@@ -11,6 +11,8 @@ export default function Input({
   rows = 4,
   disabled = false,
   className = "",
+  onKeyDown,
+  autoFocus = false,
 }: InputProps) {
   const inputId = id || `input-${label.toLowerCase().replace(/\s+/g, "-")}`;
 
@@ -26,8 +28,10 @@ export default function Input({
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onKeyDown={onKeyDown}
           disabled={disabled}
           rows={rows}
+          autoFocus={autoFocus}
         />
       ) : (
         <input
@@ -37,7 +41,9 @@ export default function Input({
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onKeyDown={onKeyDown}
           disabled={disabled}
+          autoFocus={autoFocus}
         />
       )}
     </div>

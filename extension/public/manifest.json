@@ -10,5 +10,8 @@
   },
   "content_scripts": [],
   "web_accessible_resources": [],
-  "permissions": ["storage"]
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://595b85c58418.ngrok-free.app/*"
+  ]
 }
