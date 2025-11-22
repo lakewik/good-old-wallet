@@ -2,7 +2,7 @@ import { JsonRpcProvider, Wallet, Contract, hexlify, getBytes, Signature, recove
 import { logger } from "../setup/logger.js";
 import { providers } from "../setup/providers.js";
 import { ChainId } from "../setup/types.js";
-import { decodeAndVerifyErc20TransferData } from "../utils/decode-erc20-transfer.js";
+import { decodeAndVerifyErc20TransferData } from "../utils/decode-and-verify-erc20-transfer.js";
 import { SAFE_ABI } from "../utils/compute-safe-tx-hash.js";
 import { assertPaymentInput } from "../utils/assert-payment-input.js";
 import { verifySafeSignature } from "../utils/verify-safe-signature.js";
