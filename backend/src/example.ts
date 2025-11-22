@@ -28,8 +28,9 @@ import {
 } from "./index.js";
 
 // Example wallet addresses (replace with real addresses)
-const fromWallet = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" as const;
-const toWallet = "0x8ba1f109551bD432803012645Hac136c22C92900" as const;
+// Note: These are example addresses - replace with actual wallet addresses in production
+const fromWallet = "0x49E56338f2f3E65cAaFe15C6bb95E7dc9bf73158" as const;
+const toWallet = "0x0A088759743B403eFB2e2F766f77Ec961f185e0f" as const;
 
 async function example0_LoadBalancesFromJson() {
   console.log("\n=== Example 0: Loading Balances from JSON ===");
