@@ -3,11 +3,13 @@
   "type": "module",
   "scripts": {
     "build": "bun tools/build.ts",
-    "dev": "bun tools/build.ts --watch",
-    "dev:server": "bun --hot tools/dev.ts",
-    "format": "prettier --write ."
+    "build:watch": "bun --hot tools/build.ts --watch",
+    "dev": "bun --hot tools/dev.ts",
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "ethers": "^6.15.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

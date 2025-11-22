@@ -10,5 +10,5 @@
   },
   "content_scripts": [],
   "web_accessible_resources": [],
-  "permissions": []
+  "permissions": ["storage"]
 }

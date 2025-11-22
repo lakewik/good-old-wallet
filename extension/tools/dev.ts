@@ -40,7 +40,7 @@ async function getDevHtml(): Promise<string> {
   // 3. Inject HMR script
   return popupHtmlContent
     .replace("<body>", '<body class="dev-mode">')
-    .replace('src="popup.js"', 'src="./src/popup.tsx"')
+    .replace('src="./src/popup.js"', 'src="./src/popup.tsx"')
     .replace("</body>", `${hmrClientScript}</body>`);
 }
 
