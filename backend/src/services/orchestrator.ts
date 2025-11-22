@@ -4,16 +4,41 @@ import { getErc20Balance } from "../handlers/balances.js";
 import { estimateUsdcTransferGas, gasCostInUsdc } from "../handlers/gas.js";
 import { logger } from "../setup/logger.js";
 
+/**
+ * Format a BigInt amount to human-readable format with specified decimals
+ * @param amount - Amount in smallest unit (e.g., wei for ETH, smallest unit for USDC)
+ * @param decimals - Number of decimals (e.g., 18 for ETH, 6 for USDC)
+ * @returns Formatted string with proper decimal places
+ */
+function formatAmount(amount: bigint, decimals: number): string {
+  if (amount === 0n) {
+    return "0";
+  }
+  const divisor = BigInt(10 ** decimals);
+  const whole = amount / divisor;
+  const remainder = amount % divisor;
+  
+  if (remainder === 0n) {
+    return whole.toString();
+  }
+  
+  const remainderStr = remainder.toString().padStart(decimals, "0");
+  const trimmed = remainderStr.replace(/0+$/, "");
+  return `${whole}.${trimmed}`;
+}
+
 // Scenario 1: Select best single chain for USDC send
 export async function selectBestSingleChainForUsdcSend(
   fromWallet: Address,
   toWallet: Address,
   amountUsdc: bigint,
 ): Promise<ChainQuote | null> {
+  const amountUsdcFormatted = formatAmount(amountUsdc, 6);
   logger.info("Starting single chain selection for USDC send", {
     fromWallet,
     toWallet,
     amountUsdc: amountUsdc.toString(),
+    amountUsdcFormatted,
   });
 
   const candidates: ChainQuote[] = [];
@@ -32,10 +57,14 @@ export async function selectBestSingleChainForUsdcSend(
     }
 
     const balance = getErc20Balance(chainIdNum, usdc, fromWallet);
+    const balanceFormatted = formatAmount(balance, 6);
+    const amountUsdcFormatted = formatAmount(amountUsdc, 6);
     logger.debug("Balance check for chain", {
       chainId: chainIdNum,
       balance: balance.toString(),
+      balanceFormatted,
       required: amountUsdc.toString(),
+      requiredFormatted: amountUsdcFormatted,
       sufficient: balance >= amountUsdc,
     });
 
@@ -43,7 +72,9 @@ export async function selectBestSingleChainForUsdcSend(
       logger.debug("Insufficient balance on chain", {
         chainId: chainIdNum,
         balance: balance.toString(),
+        balanceFormatted,
         required: amountUsdc.toString(),
+        requiredFormatted: amountUsdcFormatted,
       });
       continue;
     }
@@ -57,6 +88,7 @@ export async function selectBestSingleChainForUsdcSend(
       );
       const nativeCost = gas * gasPrice;
       const gasCostUsdc = await gasCostInUsdc(chainIdNum, nativeCost);
+      const gasCostUsdcFormatted = formatAmount(gasCostUsdc, 6);
 
       logger.success("Chain candidate found", {
         chainId: chainIdNum,
@@ -64,6 +96,7 @@ export async function selectBestSingleChainForUsdcSend(
         estimatedGas: gas.toString(),
         gasPrice: gasPrice.toString(),
         gasCostUsdc: gasCostUsdc.toString(),
+        gasCostUsdcFormatted,
       });
 
       candidates.push({ chainId: chainIdNum, gasCostUsdc });
@@ -75,9 +108,11 @@ export async function selectBestSingleChainForUsdcSend(
   }
 
   if (!candidates.length) {
+    const amountUsdcFormatted = formatAmount(amountUsdc, 6);
     logger.warn("No suitable chains found for single chain send", {
       fromWallet,
       amountUsdc: amountUsdc.toString(),
+      amountUsdcFormatted,
     });
     return null;
   }
@@ -85,10 +120,12 @@ export async function selectBestSingleChainForUsdcSend(
   candidates.sort((a, b) => Number(a.gasCostUsdc - b.gasCostUsdc));
   const best = candidates[0];
   
+  const gasCostUsdcFormatted = formatAmount(best.gasCostUsdc, 6);
   logger.success("Best single chain selected", {
     chainId: best.chainId,
     chainName: CHAINS[best.chainId].name,
     gasCostUsdc: best.gasCostUsdc.toString(),
+    gasCostUsdcFormatted,
     totalCandidates: candidates.length,
   });
 
@@ -101,10 +138,12 @@ export async function buildMultiChainUsdcPlan(
   toWallet: Address,
   amountUsdc: bigint,
 ): Promise<SplitPlan | null> {
+  const amountUsdcFormatted = formatAmount(amountUsdc, 6);
   logger.info("Starting multi-chain USDC plan building", {
     fromWallet,
     toWallet,
     amountUsdc: amountUsdc.toString(),
+    amountUsdcFormatted,
   });
 
   type ChainInfo = {
@@ -141,9 +180,11 @@ export async function buildMultiChainUsdcPlan(
     const buffer = BigInt(0); // or e.g. 5 * 10^usdc.decimals
     const maxSpendable = balance > buffer ? balance - buffer : 0n;
     if (maxSpendable === 0n) {
+      const balanceFormatted = formatAmount(balance, 6);
       logger.debug("No spendable balance after buffer", {
         chainId: chainIdNum,
         balance: balance.toString(),
+        balanceFormatted,
         buffer: buffer.toString(),
       });
       continue;
@@ -158,15 +199,21 @@ export async function buildMultiChainUsdcPlan(
       );
       const nativeCost = gas * gasPrice;
       const gasCostUsdc = await gasCostInUsdc(chainIdNum, nativeCost);
+      const balanceFormatted = formatAmount(balance, 6);
+      const maxSpendableFormatted = formatAmount(maxSpendable, 6);
+      const gasCostUsdcFormatted = formatAmount(gasCostUsdc, 6);
 
       logger.success("Chain added to multi-chain plan", {
         chainId: chainIdNum,
         chainName: cfg.name,
         balance: balance.toString(),
+        balanceFormatted,
         maxSpendable: maxSpendable.toString(),
+        maxSpendableFormatted,
         estimatedGas: gas.toString(),
         gasPrice: gasPrice.toString(),
         gasCostUsdc: gasCostUsdc.toString(),
+        gasCostUsdcFormatted,
       });
 
       perChain.push({
@@ -187,17 +234,24 @@ export async function buildMultiChainUsdcPlan(
     0n,
   );
 
+  const totalAvailableFormatted = formatAmount(totalAvailable, 6);
   logger.info("Total available balance calculated", {
     totalAvailable: totalAvailable.toString(),
+    totalAvailableFormatted,
     required: amountUsdc.toString(),
+    requiredFormatted: amountUsdcFormatted,
     sufficient: totalAvailable >= amountUsdc,
     chainsWithBalance: perChain.length,
   });
 
   if (totalAvailable < amountUsdc) {
+    const totalAvailableFormatted = formatAmount(totalAvailable, 6);
+    const amountUsdcFormatted = formatAmount(amountUsdc, 6);
     logger.warn("Insufficient total balance across all chains", {
       totalAvailable: totalAvailable.toString(),
+      totalAvailableFormatted,
       required: amountUsdc.toString(),
+      requiredFormatted: amountUsdcFormatted,
     });
     return null; // user actually doesn't have enough in total
   }
@@ -208,6 +262,7 @@ export async function buildMultiChainUsdcPlan(
     sortedChains: perChain.map(c => ({
       chainId: c.chainId,
       gasCostUsdc: c.gasCostUsdc.toString(),
+      gasCostUsdcFormatted: formatAmount(c.gasCostUsdc, 6),
     })),
   });
 
@@ -222,11 +277,17 @@ export async function buildMultiChainUsdcPlan(
     const take = c.maxSpendable >= remaining ? remaining : c.maxSpendable;
     remaining -= take;
 
+    const takeFormatted = formatAmount(take, 6);
+    const gasCostUsdcFormatted = formatAmount(c.gasCostUsdc, 6);
+    const remainingFormatted = formatAmount(remaining, 6);
     logger.debug("Adding leg to plan", {
       chainId: c.chainId,
       amountUsdc: take.toString(),
+      amountUsdcFormatted: takeFormatted,
       gasCostUsdc: c.gasCostUsdc.toString(),
+      gasCostUsdcFormatted,
       remaining: remaining.toString(),
+      remainingFormatted,
     });
 
     // Note: gasCostUsdc is per tx; you might want to pro-rate if you send smaller than maxSpendable
@@ -244,15 +305,21 @@ export async function buildMultiChainUsdcPlan(
     totalGasCostUsdc,
   };
 
+  const totalAmountFormatted = formatAmount(plan.totalAmount, 6);
+  const totalGasCostUsdcFormatted = formatAmount(plan.totalGasCostUsdc, 6);
   logger.success("Multi-chain plan built successfully", {
     totalAmount: plan.totalAmount.toString(),
+    totalAmountFormatted,
     totalGasCostUsdc: plan.totalGasCostUsdc.toString(),
+    totalGasCostUsdcFormatted,
     numberOfLegs: plan.legs.length,
     legs: plan.legs.map(l => ({
       chainId: l.chainId,
       chainName: CHAINS[l.chainId].name,
       amountUsdc: l.amountUsdc.toString(),
+      amountUsdcFormatted: formatAmount(l.amountUsdc, 6),
       gasCostUsdc: l.gasCostUsdc.toString(),
+      gasCostUsdcFormatted: formatAmount(l.gasCostUsdc, 6),
     })),
   });
 
@@ -266,10 +333,12 @@ export async function planUsdcSend(
   toWallet: Address,
   amountUsdc: bigint,
 ): Promise<UsdcSendPlan | null> {
+  const amountUsdcFormatted = formatAmount(amountUsdc, 6);
   logger.info("Starting automatic USDC send planning", {
     fromWallet,
     toWallet,
     amountUsdc: amountUsdc.toString(),
+    amountUsdcFormatted,
   });
 
   // First, try to find a single chain with sufficient balance
@@ -281,10 +350,12 @@ export async function planUsdcSend(
   );
 
   if (singleChainQuote) {
+    const gasCostUsdcFormatted = formatAmount(singleChainQuote.gasCostUsdc, 6);
     logger.success("Single-chain approach selected", {
       chainId: singleChainQuote.chainId,
       chainName: CHAINS[singleChainQuote.chainId].name,
       gasCostUsdc: singleChainQuote.gasCostUsdc.toString(),
+      gasCostUsdcFormatted,
     });
     return {
       type: "single",
@@ -301,10 +372,14 @@ export async function planUsdcSend(
   );
 
   if (multiChainPlan) {
+    const totalGasCostUsdcFormatted = formatAmount(multiChainPlan.totalGasCostUsdc, 6);
+    const totalAmountFormatted = formatAmount(multiChainPlan.totalAmount, 6);
     logger.success("Multi-chain approach selected", {
       numberOfLegs: multiChainPlan.legs.length,
       totalGasCostUsdc: multiChainPlan.totalGasCostUsdc.toString(),
+      totalGasCostUsdcFormatted,
       totalAmount: multiChainPlan.totalAmount.toString(),
+      totalAmountFormatted,
     });
     return {
       type: "multi",
@@ -317,6 +392,7 @@ export async function planUsdcSend(
     fromWallet,
     toWallet,
     amountUsdc: amountUsdc.toString(),
+    amountUsdcFormatted,
   });
   return null;
 }
