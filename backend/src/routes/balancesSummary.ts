@@ -6,12 +6,7 @@ import { CHAINS, type Address, ChainId } from "../index.js";
 interface BalancesSummaryResponse {
   address: Address;
   totals: {
-    native: {
-      totalWei: string;
-      totalFormatted: string;
-      symbol: string;
-    };
-    usdc: {
+    [tokenSymbol: string]: {
       totalSmallestUnit: string;
       totalFormatted: string;
     };
@@ -52,18 +47,26 @@ async function getEthPriceUSD(): Promise<number> {
 }
 
 async function getBalancesSummary(address: Address): Promise<BalancesSummaryResponse> {
-  let totalNativeWei = 0n;
+  // Group native tokens by symbol (in case different chains have different native tokens)
+  const nativeTokensBySymbol: Record<string, { totalWei: bigint; decimals: number; symbol: string }> = {};
   let totalUsdcSmallestUnit = 0n;
-  let nativeSymbol = "ETH"; // default
 
   // Only iterate over chains that are actually configured in CHAINS
   for (const [chainIdStr, chain] of Object.entries(CHAINS)) {
     const chainId = Number(chainIdStr) as ChainId;
 
-    // Get native balance
+    // Get native balance and group by symbol
     const nativeBalance = getNativeBalance(chainId, address);
-    totalNativeWei += nativeBalance;
-    nativeSymbol = chain.native.symbol;
+    const nativeSymbol = chain.native.symbol;
+    
+    if (!nativeTokensBySymbol[nativeSymbol]) {
+      nativeTokensBySymbol[nativeSymbol] = {
+        totalWei: 0n,
+        decimals: chain.native.decimals,
+        symbol: nativeSymbol,
+      };
+    }
+    nativeTokensBySymbol[nativeSymbol].totalWei += nativeBalance;
 
     // Get USDC balance
     const usdcToken = chain.commonTokens.USDC;
@@ -73,27 +76,44 @@ async function getBalancesSummary(address: Address): Promise<BalancesSummaryResp
     }
   }
 
+  // Build totals object with native token symbols as keys
+  const totals: Record<string, any> = {};
+  
+  // Add native tokens using their symbols as keys
+  for (const [symbol, tokenData] of Object.entries(nativeTokensBySymbol)) {
+    totals[symbol] = {
+      totalSmallestUnit: tokenData.totalWei.toString(),
+      totalFormatted: formatBalance(tokenData.totalWei, tokenData.decimals),
+    };
+  }
+  
+  // Add USDC
+  totals.USDC = {
+    totalSmallestUnit: totalUsdcSmallestUnit.toString(),
+    totalFormatted: formatBalance(totalUsdcSmallestUnit, 6), // USDC has 6 decimals
+  };
+
   // Calculate total portfolio value in USD
+  // For now, assume all native tokens are ETH (or use first native token's price)
+  // In production, you'd fetch prices for each native token symbol
   const ethPriceUSD = await getEthPriceUSD();
-  const totalEth = Number(totalNativeWei) / Math.pow(10, 18);
+  let totalNativeValueUSD = 0;
+  
+  for (const [symbol, tokenData] of Object.entries(nativeTokensBySymbol)) {
+    // For now, use ETH price for all native tokens
+    // In production, fetch price for each symbol
+    const tokenAmount = Number(tokenData.totalWei) / Math.pow(10, tokenData.decimals);
+    totalNativeValueUSD += tokenAmount * ethPriceUSD; // Using ETH price as placeholder
+  }
+  
   const totalUsdc = Number(totalUsdcSmallestUnit) / Math.pow(10, 6);
   
-  // Total value = (ETH amount * ETH price) + USDC amount
-  const totalPortfolioValueUSD = (totalEth * ethPriceUSD) + totalUsdc;
+  // Total value = (native tokens value) + USDC amount
+  const totalPortfolioValueUSD = totalNativeValueUSD + totalUsdc;
 
   return {
     address,
-    totals: {
-      native: {
-        totalWei: totalNativeWei.toString(),
-        totalFormatted: formatBalance(totalNativeWei, 18), // Assuming all native tokens are 18 decimals
-        symbol: nativeSymbol,
-      },
-      usdc: {
-        totalSmallestUnit: totalUsdcSmallestUnit.toString(),
-        totalFormatted: formatBalance(totalUsdcSmallestUnit, 6), // USDC has 6 decimals
-      },
-    },
+    totals,
     totalPortfolioValueUSD: totalPortfolioValueUSD.toFixed(2),
   };
 }
@@ -131,20 +151,20 @@ function isValidAddress(address: string): address is Address {
  *                   example: "0x13190e7028c5e7e70f87efe08a973c330b09f458"
  *                 totals:
  *                   type: object
+ *                   description: Totals grouped by token symbol (e.g., ETH, USDC)
+ *                   additionalProperties: true
  *                   properties:
- *                     native:
+ *                     ETH:
  *                       type: object
+ *                       description: Native token totals (key is the token symbol)
  *                       properties:
- *                         totalWei:
+ *                         totalSmallestUnit:
  *                           type: string
  *                           example: "5300000000000000000"
  *                         totalFormatted:
  *                           type: string
  *                           example: "5.3"
- *                         symbol:
- *                           type: string
- *                           example: "ETH"
- *                     usdc:
+ *                     USDC:
  *                       type: object
  *                       properties:
  *                         totalSmallestUnit:
