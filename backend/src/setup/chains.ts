@@ -86,6 +86,26 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     },
     minNativeBalance: BigInt("3000000000000000"), // 0.003 ETH
   },
+  [ChainId.GNOSIS]: {
+    id: ChainId.GNOSIS,
+    name: "Gnosis",
+    rpcUrl: process.env.RPC_GNOSIS!,
+    native: {
+      symbol: "xDAI",
+      decimals: 18,
+      address: "0xaA7ec943fc665162D5adc0a23dF5B8F983F3F253",
+      isNative: true,
+    },
+    commonTokens: {
+      USDC: {
+        symbol: "USDC",
+        decimals: 6,
+        // Gnosis xDAI Bridged USDC
+        address: "0xddafbb505ad214d7b80b1f830fccc89b60fb7a83",
+      },
+    },
+    minNativeBalance: BigInt("100000000000000000"), // 0.1 xDAI
+  },
 };
 
 // Log chain initialization

@@ -12,7 +12,8 @@ src/
   │   ├── balances.ts     # Balance query functions
   │   └── gas.ts          # Gas estimation utilities
   ├── services/           # Service layer
-  │   └── orchestrator.ts # Main orchestration logic
+  │   ├── orchestrator.ts # Main orchestration logic
+  │   └── x402.ts         # X402 payment protocol service
   ├── routes/             # API route handlers
   │   ├── assets.ts       # Assets balance endpoint
   │   ├── verify.ts       # Payment verification endpoint
@@ -93,23 +94,112 @@ curl http://localhost:7000/assets/0x742d35Cc6634C0532925a3b844Bc454e4438f44e
 ```
 
 #### `POST /verify`
-Verify payment payload and signature (placeholder implementation).
+Verify payment payload and signature using the X402 payment protocol.
 
+**Request body:**
+```json
+{
+  "paymentPayload": {
+    "scheme": "evm-safe-wcrc",
+    "networkId": 100,
+    "safeAddress": "0x...",
+    "safeTx": {
+      "to": "0x...",
+      "value": "0",
+      "data": "0x...",
+      "operation": 0,
+      "safeTxGas": "0",
+      "baseGas": "0",
+      "gasPrice": "0",
+      "gasToken": "0x0000000000000000000000000000000000000000",
+      "refundReceiver": "0x0000000000000000000000000000000000000000",
+      "nonce": "0"
+    },
+    "signatures": "0x..."
+  },
+  "paymentDetails": {
+    "receiver": "0x...",
+    "amount": "1000000"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "valid": true,
+  "meta": {
+    "to": "0x...",
+    "amount": "1000000",
+    "token": "0x..."
+  }
+}
+```
+
+**Example:**
 ```bash
 curl -X POST http://localhost:7000/verify \
   -H "Content-Type: application/json" \
-  -d '{"paymentPayload": {...}, "paymentDetails": {...}}'
+  -d @payment-verification.json
 ```
 
 #### `POST /settle`
-Execute Safe transaction for payment settlement (placeholder implementation).
-Returns 200 with `X-PAYMENT-RESPONSE` header.
+Execute Safe transaction for payment settlement using the X402 service.
+Returns 200 with `X-PAYMENT-RESPONSE` header containing settlement details.
 
+**Request body:** Same as `/verify`
+
+**Response:**
+```json
+{
+  "settled": true,
+  "txHash": "0x...",
+  "blockNumber": "12345678"
+}
+```
+
+**Response Headers:**
+- `X-PAYMENT-RESPONSE`: JSON string with settlement result
+
+**Example:**
 ```bash
 curl -X POST http://localhost:7000/settle \
   -H "Content-Type: application/json" \
-  -d '{"paymentPayload": {...}, "paymentDetails": {...}}'
+  -d @payment-settlement.json
 ```
+
+## Architecture
+
+### Service Layer
+
+The application follows a clean architecture with separation of concerns:
+
+- **Routes** (`/routes`): Handle HTTP requests/responses, input validation, and error handling
+- **Services** (`/services`): Contain business logic and orchestration
+- **Handlers** (`/handlers`): Perform specific operations (balances, gas estimation)
+- **Setup** (`/setup`): Configuration, logging, and initialization
+
+### X402 Payment Protocol
+
+The X402 service (`services/x402.ts`) implements the payment verification and settlement protocol:
+
+1. **Verification Flow**:
+   - Validates payment scheme (`evm-safe-wcrc`)
+   - Checks network ID (Gnosis Chain = 100)
+   - Verifies Safe multisig signatures
+   - Validates transfer recipient and amount
+
+2. **Settlement Flow**:
+   - Re-verifies payment (optional)
+   - Builds Safe `execTransaction` call
+   - Executes transaction on-chain
+   - Waits for confirmation
+   - Returns transaction receipt
+
+**Note**: Current implementation contains TODOs for actual Safe integration. Replace placeholders with:
+- `SafeVerifier` for signature verification
+- `SafeTxBuilder` for transaction execution
+- `viem` clients for blockchain interaction
 
 ## Features
 

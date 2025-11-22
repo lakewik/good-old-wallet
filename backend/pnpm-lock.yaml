@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@aboutcircles/sdk-rpc':
+        specifier: ^0.1.1
+        version: 0.1.1(typescript@5.9.3)
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1
@@ -26,6 +29,15 @@ importers:
         version: 5.9.3
 
 packages:
+
+  '@aboutcircles/sdk-rpc@0.1.1':
+    resolution: {integrity: sha512-YGsgKzbVa8eASA0IL48ZsxSCLAuXhlBRj8Pp5iXZknIEZ8zUlLhmJR7guYk4Z1LEV833JkoFgWYnb0H+vleu9g==}
+
+  '@aboutcircles/sdk-types@0.1.1':
+    resolution: {integrity: sha512-zJNx13EOJU7x9Z2IKV9WihyQG4nLlNYq2Q9bjaZiJSkohpjqUdjOjGJ4Ha5PxTn+JD19wd5zVtP3zUQhqzVkpw==}
+
+  '@aboutcircles/sdk-utils@0.1.1':
+    resolution: {integrity: sha512-K6M9fcsdI76f7rTshS3ytMhFW/X+mg+/5XN0lE27Roh7Pi4sIyL67fUZnqT629FsMyuOjFdhckqIAsusPSKY3A==}
 
   '@adraffy/ens-normalize@1.10.1':
     resolution: {integrity: sha512-96Z2IP3mYmF1Xg2cDm8f1gWGf/HUVedQ3FMifV4kG/PQ4yEP51xDtRAEfhVNt5f/uzpNkZHwWQuUcu6D6K+Ekw==}
@@ -199,6 +211,17 @@ packages:
   '@types/node@22.7.5':
     resolution: {integrity: sha512-jML7s2NAzMWc//QSJ1a3prpk78cOPchGvXJsC3C6R6PSMoooztvRVQEz89gmBTBY1SPMaqo5teB4uNHPdetShQ==}
 
+  abitype@1.2.0:
+    resolution: {integrity: sha512-fD3ROjckUrWsybaSor2AdWxzA0e/DSyV2dA4aYd7bd8orHsoJjl09fOgKfUkTDfk0BsDGBf4NBgu/c7JoS2Npw==}
+    peerDependencies:
+      typescript: '>=5.0.4'
+      zod: ^3.22.0 || ^4.0.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+      zod:
+        optional: true
+
   aes-js@4.0.0-beta.5:
     resolution: {integrity: sha512-G965FqalsNyrPqgEGON7nIx1e/OVENSgiEIzyC63haUMuvNnwIgIjMs52hlTCKhkBny7A2ORNlfY9Zu+jmGk1Q==}
 
@@ -222,6 +245,9 @@ packages:
 
   get-tsconfig@4.13.0:
     resolution: {integrity: sha512-1VKTZJCwBrvbd+Wn3AOgQP/2Av+TfTCOlE4AcRJE72W1ksZXbAx8PPBR9RzgTeSPzlPMHrbANMH3LbltH73wxQ==}
+
+  multiformats@13.4.1:
+    resolution: {integrity: sha512-VqO6OSvLrFVAYYjgsr8tyv62/rCQhPgsZUXLTqoFLSgdkgiUYKYeArbt1uWLlEpkjxQe+P0+sHlbPEte1Bi06Q==}
 
   resolve-pkg-maps@1.0.0:
     resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
@@ -258,6 +284,29 @@ packages:
         optional: true
 
 snapshots:
+
+  '@aboutcircles/sdk-rpc@0.1.1(typescript@5.9.3)':
+    dependencies:
+      '@aboutcircles/sdk-types': 0.1.1(typescript@5.9.3)
+      '@aboutcircles/sdk-utils': 0.1.1(typescript@5.9.3)
+    transitivePeerDependencies:
+      - typescript
+      - zod
+
+  '@aboutcircles/sdk-types@0.1.1(typescript@5.9.3)':
+    dependencies:
+      abitype: 1.2.0(typescript@5.9.3)
+    transitivePeerDependencies:
+      - typescript
+      - zod
+
+  '@aboutcircles/sdk-utils@0.1.1(typescript@5.9.3)':
+    dependencies:
+      '@aboutcircles/sdk-types': 0.1.1(typescript@5.9.3)
+      multiformats: 13.4.1
+    transitivePeerDependencies:
+      - typescript
+      - zod
 
   '@adraffy/ens-normalize@1.10.1': {}
 
@@ -353,6 +402,10 @@ snapshots:
     dependencies:
       undici-types: 6.19.8
 
+  abitype@1.2.0(typescript@5.9.3):
+    optionalDependencies:
+      typescript: 5.9.3
+
   aes-js@4.0.0-beta.5: {}
 
   dotenv@16.6.1: {}
@@ -405,6 +458,8 @@ snapshots:
   get-tsconfig@4.13.0:
     dependencies:
       resolve-pkg-maps: 1.0.0
+
+  multiformats@13.4.1: {}
 
   resolve-pkg-maps@1.0.0: {}
 

@@ -8,6 +8,7 @@ export const providers: Record<ChainId, ethers.JsonRpcProvider> = {
   [ChainId.ARBITRUM_ONE]: new ethers.JsonRpcProvider(CHAINS[ChainId.ARBITRUM_ONE].rpcUrl),
   [ChainId.BASE]: new ethers.JsonRpcProvider(CHAINS[ChainId.BASE].rpcUrl),
   [ChainId.OPTIMISM]: new ethers.JsonRpcProvider(CHAINS[ChainId.OPTIMISM].rpcUrl),
+  [ChainId.GNOSIS]: new ethers.JsonRpcProvider(CHAINS[ChainId.GNOSIS].rpcUrl),
 };
 
 // Log provider initialization

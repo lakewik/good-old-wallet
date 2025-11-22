@@ -1,29 +1,29 @@
 import http from "http";
 import { logger } from "../setup/logger.js";
-
-interface PaymentPayload {
-  // TODO: Define payment payload structure
-  [key: string]: any;
-}
-
-interface PaymentDetails {
-  // TODO: Define payment details structure
-  [key: string]: any;
-}
+import { x402Service, type EvmSafeWcrcPaymentPayload, type PaymentDetails } from "../services/x402.js";
 
 interface VerifyRequest {
-  paymentPayload: PaymentPayload;
+  paymentPayload: EvmSafeWcrcPaymentPayload;
   paymentDetails: PaymentDetails;
 }
 
 /**
  * POST /verify
- * Verifies payment payload and signature
+ * Verifies payment payload and signature using X402 service
  * 
  * Expected request body:
  * {
- *   "paymentPayload": { ... },
- *   "paymentDetails": { ... }
+ *   "paymentPayload": {
+ *     "scheme": "evm-safe-wcrc",
+ *     "networkId": 100,
+ *     "safeAddress": "0x...",
+ *     "safeTx": { ... },
+ *     "signatures": "0x..."
+ *   },
+ *   "paymentDetails": {
+ *     "receiver": "0x...",
+ *     "amount": "1000000"
+ *   }
  * }
  */
 export async function handleVerifyRequest(
@@ -52,28 +52,19 @@ export async function handleVerifyRequest(
       const data: VerifyRequest = JSON.parse(body);
       
       logger.info("Received verify request", {
-        hasPayload: !!data.paymentPayload,
-        hasDetails: !!data.paymentDetails,
+        scheme: data.paymentPayload?.scheme,
+        networkId: data.paymentPayload?.networkId,
       });
 
-      // TODO: Implement signature verification logic
-      // 1. Extract signature from paymentPayload
-      // 2. Verify signature against paymentDetails
-      // 3. Validate payment parameters
-      // 4. Check if payment is valid and not expired
+      // Call X402 service to verify payment
+      const result = await x402Service.verifyPayment(
+        data.paymentPayload,
+        data.paymentDetails
+      );
 
-      // Placeholder response
-      const verificationResult = {
-        verified: true, // TODO: Replace with actual verification result
-        message: "Payment verification successful",
-        timestamp: new Date().toISOString(),
-        // TODO: Add verification details
-      };
-
-      logger.info("Verification completed", verificationResult);
-
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify(verificationResult, null, 2));
+      const statusCode = result.valid ? 200 : 400;
+      res.writeHead(statusCode, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result, null, 2));
     } catch (error) {
       logger.error("Error verifying payment", error);
       
@@ -81,16 +72,16 @@ export async function handleVerifyRequest(
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(
           JSON.stringify({
-            error: "Invalid JSON",
-            message: "Request body must be valid JSON",
+            valid: false,
+            reason: "Invalid JSON",
           })
         );
       } else {
         res.writeHead(500, { "Content-Type": "application/json" });
         res.end(
           JSON.stringify({
-            error: "Internal server error",
-            message: error instanceof Error ? error.message : String(error),
+            valid: false,
+            reason: error instanceof Error ? error.message : "Internal error",
           })
         );
       }
@@ -102,8 +93,8 @@ export async function handleVerifyRequest(
     res.writeHead(500, { "Content-Type": "application/json" });
     res.end(
       JSON.stringify({
-        error: "Request error",
-        message: error.message,
+        valid: false,
+        reason: error.message,
       })
     );
   });
