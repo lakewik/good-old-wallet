@@ -89,10 +89,11 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
 };
 
 // Log chain initialization
-logger.info("Initializing chain configurations", {
-  chains: Object.values(CHAINS).map(c => ({
-    id: c.id,
-    name: c.name,
-    hasRpcUrl: !!c.rpcUrl,
-  })),
-});
+
+// logger.info("Initializing chain configurations", {
+//   chains: Object.values(CHAINS).map(c => ({
+//     id: c.id,
+//     name: c.name,
+//     hasRpcUrl: !!c.rpcUrl,
+//   })),
+// });

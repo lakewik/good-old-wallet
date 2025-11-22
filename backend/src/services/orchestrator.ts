@@ -58,7 +58,7 @@ export async function selectBestSingleChainForUsdcSend(
       const nativeCost = gas * gasPrice;
       const gasCostUsdc = await gasCostInUsdc(chainIdNum, nativeCost);
 
-      logger.info("Chain candidate found", {
+      logger.success("Chain candidate found", {
         chainId: chainIdNum,
         chainName: cfg.name,
         estimatedGas: gas.toString(),
@@ -85,7 +85,7 @@ export async function selectBestSingleChainForUsdcSend(
   candidates.sort((a, b) => Number(a.gasCostUsdc - b.gasCostUsdc));
   const best = candidates[0];
   
-  logger.info("Best single chain selected", {
+  logger.success("Best single chain selected", {
     chainId: best.chainId,
     chainName: CHAINS[best.chainId].name,
     gasCostUsdc: best.gasCostUsdc.toString(),
@@ -159,7 +159,7 @@ export async function buildMultiChainUsdcPlan(
       const nativeCost = gas * gasPrice;
       const gasCostUsdc = await gasCostInUsdc(chainIdNum, nativeCost);
 
-      logger.info("Chain added to multi-chain plan", {
+      logger.success("Chain added to multi-chain plan", {
         chainId: chainIdNum,
         chainName: cfg.name,
         balance: balance.toString(),
@@ -244,7 +244,7 @@ export async function buildMultiChainUsdcPlan(
     totalGasCostUsdc,
   };
 
-  logger.info("Multi-chain plan built successfully", {
+  logger.success("Multi-chain plan built successfully", {
     totalAmount: plan.totalAmount.toString(),
     totalGasCostUsdc: plan.totalGasCostUsdc.toString(),
     numberOfLegs: plan.legs.length,
@@ -281,7 +281,7 @@ export async function planUsdcSend(
   );
 
   if (singleChainQuote) {
-    logger.info("Single-chain approach selected", {
+    logger.success("Single-chain approach selected", {
       chainId: singleChainQuote.chainId,
       chainName: CHAINS[singleChainQuote.chainId].name,
       gasCostUsdc: singleChainQuote.gasCostUsdc.toString(),
@@ -301,7 +301,7 @@ export async function planUsdcSend(
   );
 
   if (multiChainPlan) {
-    logger.info("Multi-chain approach selected", {
+    logger.success("Multi-chain approach selected", {
       numberOfLegs: multiChainPlan.legs.length,
       totalGasCostUsdc: multiChainPlan.totalGasCostUsdc.toString(),
       totalAmount: multiChainPlan.totalAmount.toString(),

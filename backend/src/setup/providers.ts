@@ -14,9 +14,9 @@ export const providers: Partial<Record<ChainId, ethers.JsonRpcProvider>> = Objec
 );
 
 // Log provider initialization
-logger.info("Initializing Ethereum providers", {
-  chains: Object.entries(providers).map(([id, provider]) => ({
-    chainId: Number(id),
-    rpcUrl: CHAINS[Number(id) as ChainId]?.rpcUrl,
-  })),
-});
+// logger.info("Initializing Ethereum providers", {
+//   chains: Object.entries(providers).map(([id, provider]) => ({
+//     chainId: Number(id),
+//     rpcUrl: CHAINS[Number(id) as ChainId]?.rpcUrl,
+//   })),
+// });

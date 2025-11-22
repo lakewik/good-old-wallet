@@ -77,9 +77,14 @@ export async function estimateUsdcTransferGas(
     const gasPrice = feeData.gasPrice ?? (feeData.maxFeePerGas ? feeData.maxFeePerGas : 0n);
     const totalCost = gas * gasPrice;
     
-    logger.info("Gas estimation successful", {
+    // Format send amount for display (USDC has 6 decimals)
+    const sendAmountUsdc = Number(amount) / 1e6;
+    
+    logger.success("Gas estimation successful", {
       chainId,
       chainName: chainConfig.name,
+      sendAmount: amount.toString(),
+      sendAmountUsdc: sendAmountUsdc.toFixed(6),
       gas: gas.toString(),
       gasPrice: gasPrice.toString(),
       totalCostNative: totalCost.toString(),
@@ -101,16 +106,119 @@ export async function estimateUsdcTransferGas(
   }
 }
 
+// Price cache to avoid too many API calls
+// Cache expires after 5 minutes
+interface PriceCache {
+  price: number;
+  timestamp: number;
+}
+
+const PRICE_CACHE: Map<string, PriceCache> = new Map();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+async function fetchEthPriceFromCoinGecko(): Promise<number> {
+  const cacheKey = "ethereum";
+  const cached = PRICE_CACHE.get(cacheKey);
+  
+  // Return cached price if still valid
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    logger.debug("Using cached ETH price", {
+      price: cached.price,
+      age: Date.now() - cached.timestamp,
+    });
+    return cached.price;
+  }
+
+  try {
+    logger.debug("Fetching ETH price from CoinGecko");
+    const response = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd",
+      {
+        headers: {
+          "Accept": "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`CoinGecko API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json() as { ethereum?: { usd?: number } };
+    
+    if (!data.ethereum?.usd) {
+      throw new Error("Invalid response from CoinGecko: missing price data");
+    }
+
+    const price = data.ethereum.usd;
+    
+    // Update cache
+    PRICE_CACHE.set(cacheKey, {
+      price,
+      timestamp: Date.now(),
+    });
+
+    logger.debug("ETH price fetched from CoinGecko", {
+      price,
+    });
+
+    return price;
+  } catch (error) {
+    // If we have a cached price, use it even if expired
+    if (cached) {
+      logger.warn("Failed to fetch ETH price, using expired cache", {
+        error: error instanceof Error ? error.message : String(error),
+        cachedPrice: cached.price,
+      });
+      return cached.price;
+    }
+
+    logger.error("Failed to fetch ETH price from CoinGecko", error);
+    throw new Error(
+      `Failed to fetch ETH price: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+}
+
 export async function gasCostInUsdc(
   chainId: ChainId,
   nativeAmountWei: bigint,
 ): Promise<bigint> {
-  logger.warn("gasCostInUsdc called - not implemented", {
+  logger.debug("Converting native token amount to USDC", {
     chainId,
     nativeAmountWei: nativeAmountWei.toString(),
   });
-  // Example: priceNativeInUsd * 1e6 / 1e18  (pseudo)
-  // You can plug in a price oracle or cached off-chain price feed.
-  // For now, just placeholder.
-  throw new Error("Implement with real pricing");
+
+  const chainConfig = CHAINS[chainId];
+  if (!chainConfig) {
+    throw new Error(`Chain ${chainId} not configured`);
+  }
+
+  // Get ETH price in USD
+  const ethPriceUsd = await fetchEthPriceFromCoinGecko();
+
+  // Convert native amount (wei) to USDC
+  // Formula: (nativeAmountWei / 10^18) * ethPriceUsd * 10^6
+  // Using BigInt for precision: (nativeAmountWei * priceScaled * 10^6) / (10^18 * priceScaleFactor)
+  
+  // Scale price to 8 decimal places for precision (e.g., 2500.50 -> 250050000000)
+  const PRICE_SCALE_FACTOR = 1e8;
+  const priceScaled = BigInt(Math.round(ethPriceUsd * PRICE_SCALE_FACTOR));
+  const usdcDecimals = BigInt(10 ** 6);
+  const nativeDecimals = BigInt(10 ** chainConfig.native.decimals);
+
+  // Calculate: (nativeAmountWei * priceScaled * usdcDecimals) / (nativeDecimals * priceScaleFactor)
+  const numerator = nativeAmountWei * priceScaled * usdcDecimals;
+  const denominator = nativeDecimals * BigInt(PRICE_SCALE_FACTOR);
+  const usdcAmount = numerator / denominator;
+
+  logger.success("Converted native token to USDC", {
+    chainId,
+    chainName: chainConfig.name,
+    nativeAmountWei: nativeAmountWei.toString(),
+    ethPriceUsd: ethPriceUsd.toFixed(2),
+    usdcAmount: usdcAmount.toString(),
+  });
+
+  return usdcAmount;
 }
