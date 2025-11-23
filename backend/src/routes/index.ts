@@ -7,4 +7,5 @@ export { handleSettleRequest } from "./settle.js";
 export { handleBalancesSummaryRequest } from "./balancesSummary.js";
 export { handlePlanSendingTransactionRequest } from "./planSendingTransaction.js";
 export { handleApiDocsRequest, handleSwaggerUIRequest } from "./swagger.js";
+export { handleTransactionsRequest } from "./transactions.js";
 

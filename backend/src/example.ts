@@ -307,7 +307,7 @@ async function example4_CheckBalances() {
   // Only iterate over chains that are actually configured in CHAINS
   for (const [chainIdStr, chain] of Object.entries(CHAINS)) {
     const chainId = Number(chainIdStr) as ChainId;
-    const balance = getNativeBalance(chainId, fromWallet);
+    const balance = await getNativeBalance(chainId, fromWallet);
     const balanceEth = Number(balance) / Math.pow(10, chain.native.decimals);
     console.log(`   ${chain.name}: ${balanceEth.toFixed(6)} ${chain.native.symbol}`);
   }
@@ -319,7 +319,7 @@ async function example4_CheckBalances() {
     const chainId = Number(chainIdStr) as ChainId;
     const usdc = chain.commonTokens.USDC;
     if (usdc) {
-      const balance = getErc20Balance(chainId, usdc, fromWallet);
+      const balance = await getErc20Balance(chainId, usdc, fromWallet);
       const balanceUsdc = Number(balance) / Math.pow(10, usdc.decimals);
       console.log(`   ${chain.name}: ${balanceUsdc.toFixed(2)} USDC`);
     } else {

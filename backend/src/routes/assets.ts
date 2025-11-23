@@ -62,7 +62,7 @@ async function getSummarizedAmounts(address: Address): Promise<SummarizedAmounts
     const chainId = Number(chainIdStr) as ChainId;
 
     // Get native balance
-    const nativeBalance = getNativeBalance(chainId, address);
+    const nativeBalance = await getNativeBalance(chainId, address);
     const nativeFormatted = formatBalance(nativeBalance, chain.native.decimals);
     totalNativeWei += nativeBalance;
     nativeSymbol = chain.native.symbol;
@@ -72,7 +72,7 @@ async function getSummarizedAmounts(address: Address): Promise<SummarizedAmounts
     let usdcFormatted = "0";
     const usdcToken = chain.commonTokens.USDC;
     if (usdcToken) {
-      usdcBalance = getErc20Balance(chainId, usdcToken, address);
+      usdcBalance = await getErc20Balance(chainId, usdcToken, address);
       usdcFormatted = formatBalance(usdcBalance, usdcToken.decimals);
       totalUsdcSmallestUnit += usdcBalance;
     }

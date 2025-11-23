@@ -2,7 +2,7 @@ import "./setup/config.js"; // Load environment variables
 import http from "http";
 import url from "url";
 import { logger } from "./setup/logger.js";
-import { handleAssetsRequest, handleVerifyRequest, handleSettleRequest, handleBalancesSummaryRequest, handlePlanSendingTransactionRequest, handleApiDocsRequest, handleSwaggerUIRequest } from "./routes/index.js";
+import { handleAssetsRequest, handleVerifyRequest, handleSettleRequest, handleBalancesSummaryRequest, handlePlanSendingTransactionRequest, handleApiDocsRequest, handleSwaggerUIRequest, handleTransactionsRequest } from "./routes/index.js";
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 7000;
 
@@ -118,6 +118,14 @@ const server = http.createServer(async (req, res) => {
   if (balancesSummaryMatch && req.method === "GET") {
     const address = balancesSummaryMatch[1] as string;
     await handleBalancesSummaryRequest(req, res, address);
+    return;
+  }
+
+  // Transactions endpoint
+  const transactionsMatch = pathname?.match(/^\/transactions\/(.+)$/);
+  if (transactionsMatch && req.method === "GET") {
+    const address = transactionsMatch[1] as string;
+    await handleTransactionsRequest(req, res, address);
     return;
   }
 

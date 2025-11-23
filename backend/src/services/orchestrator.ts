@@ -56,7 +56,7 @@ export async function selectBestSingleChainForUsdcSend(
       continue;
     }
 
-    const balance = getErc20Balance(chainIdNum, usdc, fromWallet);
+    const balance = await getErc20Balance(chainIdNum, usdc, fromWallet);
     const balanceFormatted = formatAmount(balance, 6);
     const amountUsdcFormatted = formatAmount(amountUsdc, 6);
     logger.debug("Balance check for chain", {
@@ -166,7 +166,7 @@ export async function buildMultiChainUsdcPlan(
       continue;
     }
 
-    const balance = getErc20Balance(chainIdNum, usdc, fromWallet);
+    const balance = await getErc20Balance(chainIdNum, usdc, fromWallet);
     if (balance === 0n) {
       continue;
     }
@@ -376,7 +376,7 @@ export async function planUsdcSend(
     const chainIdNum = Number(chainIdStr) as ChainId;
     const usdc = cfg.commonTokens.USDC;
     if (usdc) {
-      const balance = getErc20Balance(chainIdNum, usdc, fromWallet);
+      const balance = await getErc20Balance(chainIdNum, usdc, fromWallet);
       quickTotalBalance += balance;
     }
   }

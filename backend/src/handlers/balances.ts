@@ -28,28 +28,31 @@ function formatAmount(amount: bigint, decimals: number): string {
 }
 
 // Balance storage structure: chainId -> wallet -> tokenAddress -> balance (as string for JSON compatibility)
-type BalanceStorage = Record<
+export type BalanceStorage = Record<
   number,
   Record<Address, Record<Address, string>>
 >;
 
-// In-memory balance storage (will be populated from external API)
-let balanceStorage: BalanceStorage = {
-  // Ethereum (ChainId 1)
-  [ChainId.ETHEREUM]: {
-    "0x13190e7028c5e7e70f87efe08a973c330b09f458": {
-      [NATIVE_TOKEN_ADDRESS]: "3500000000000000000", // 3.5 ETH
-      "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48": "250000000", // 250 USDC
-    },
-  },
-  // Base (ChainId 8453)
-  [ChainId.BASE]: {
-    "0x13190e7028c5e7e70f87efe08a973c330b09f458": {
-      [NATIVE_TOKEN_ADDRESS]: "1800000000000000000", // 1.8 ETH
-      "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913": "150000000", // 150 USDC
-    },
-  },
-};
+// In-memory balance storage (will be populated from RPC providers)
+// Example balance storage (commented out - now using RPC providers):
+// let balanceStorage: BalanceStorage = {
+//   // Ethereum (ChainId 1)
+//   [ChainId.ETHEREUM]: {
+//     "0x13190e7028c5e7e70f87efe08a973c330b09f458": {
+//       [NATIVE_TOKEN_ADDRESS]: "3500000000000000000", // 3.5 ETH
+//       "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48": "250000000", // 250 USDC
+//     },
+//   },
+//   // Base (ChainId 8453)
+//   [ChainId.BASE]: {
+//     "0x13190e7028c5e7e70f87efe08a973c330b09f458": {
+//       [NATIVE_TOKEN_ADDRESS]: "1800000000000000000", // 1.8 ETH
+//       "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913": "150000000", // 150 USDC
+//     },
+//   },
+// };
+
+let balanceStorage: BalanceStorage = {};
 
 /**
  * Update balances from a JSON object
@@ -152,98 +155,33 @@ export function getBalancesAsJson(): BalanceStorage {
 }
 
 /**
- * Get native balance from JSON storage
+ * Get native balance from RPC provider
  * @param chainId - The chain ID
  * @param wallet - The wallet address
- * @returns The balance in wei, or 0n if not found
+ * @returns The balance in wei
  */
-export function getNativeBalance(
+export async function getNativeBalance(
   chainId: ChainId,
   wallet: Address,
-): bigint {
-  logger.debug("Fetching native balance from JSON storage", { chainId, wallet });
-
-  const chainBalances = balanceStorage[chainId];
-  if (!chainBalances) {
-    logger.debug("No balances found for chain", { chainId });
-    return 0n;
-  }
-
-  const walletBalances = chainBalances[wallet];
-  if (!walletBalances) {
-    logger.debug("No balances found for wallet on chain", { chainId, wallet });
-    return 0n;
-  }
-
-  const balanceStr = walletBalances[NATIVE_TOKEN_ADDRESS];
-  if (!balanceStr) {
-    logger.debug("No native balance found", { chainId, wallet });
-    return 0n;
-  }
-
-  const balance = BigInt(balanceStr);
-  const chainConfig = CHAINS[chainId];
-  const balanceFormatted = chainConfig ? formatAmount(balance, chainConfig.native.decimals) : balance.toString();
-  logger.info("Native balance fetched from JSON storage", {
-    chainId,
-    wallet,
-    balance: balance.toString(),
-    balanceFormatted,
-  });
-  return balance;
+): Promise<bigint> {
+  // Always fetch from RPC provider
+  return await getNativeBalanceFromProvider(chainId, wallet);
 }
 
 /**
- * Get ERC-20 balance from JSON storage
+ * Get ERC-20 balance from RPC provider
  * @param chainId - The chain ID
  * @param token - The token configuration
  * @param wallet - The wallet address
- * @returns The balance in token's smallest unit, or 0n if not found
+ * @returns The balance in token's smallest unit
  */
-export function getErc20Balance(
+export async function getErc20Balance(
   chainId: ChainId,
   token: TokenConfig,
   wallet: Address,
-): bigint {
-  logger.debug("Fetching ERC-20 balance from JSON storage", {
-    chainId,
-    token: token.symbol,
-    tokenAddress: token.address,
-    wallet,
-  });
-
-  const chainBalances = balanceStorage[chainId];
-  if (!chainBalances) {
-    logger.debug("No balances found for chain", { chainId });
-    return 0n;
-  }
-
-  const walletBalances = chainBalances[wallet];
-  if (!walletBalances) {
-    logger.debug("No balances found for wallet on chain", { chainId, wallet });
-    return 0n;
-  }
-
-  const balanceStr = walletBalances[token.address];
-  if (!balanceStr) {
-    logger.debug("No token balance found", {
-      chainId,
-      wallet,
-      tokenAddress: token.address,
-    });
-    return 0n;
-  }
-
-  const balance = BigInt(balanceStr);
-  const balanceFormatted = formatAmount(balance, token.decimals);
-  logger.info("ERC-20 balance fetched from JSON storage", {
-    chainId,
-    token: token.symbol,
-    wallet,
-    balance: balance.toString(),
-    balanceFormatted,
-  });
-  return balance;
+): Promise<bigint> {
+  // Always fetch from RPC provider
+  return await getErc20BalanceFromProvider(chainId, token, wallet);
 }
 
 /**
@@ -284,7 +222,7 @@ export async function getNativeBalanceFromProvider(
  * @param chainId - The chain ID
  * @param token - The token configuration
  * @param wallet - The wallet address
- * @returns The balance in token's smallest unit
+ * @returns The balance in token's smallest unit (0n if contract doesn't exist or error occurs)
  */
 export async function getErc20BalanceFromProvider(
   chainId: ChainId,
@@ -301,8 +239,20 @@ export async function getErc20BalanceFromProvider(
   try {
     const provider = providers[chainId];
     if (!provider) {
-      throw new Error(`Provider not configured for chain ${chainId}. Chain may be commented out in chains.ts`);
+      logger.warn(`Provider not configured for chain ${chainId}`);
+      return 0n;
     }
+
+    // Check if contract exists by getting code
+    const code = await provider.getCode(token.address);
+    if (!code || code === "0x") {
+      logger.debug(`Contract does not exist at address ${token.address} on chain ${chainId}`, {
+        chainId,
+        tokenAddress: token.address,
+      });
+      return 0n;
+    }
+
     const erc20 = new ethers.Contract(
       token.address,
       ["function balanceOf(address) view returns (uint256)"],
@@ -319,7 +269,29 @@ export async function getErc20BalanceFromProvider(
     });
     return balance;
   } catch (error) {
-    logger.error("Failed to fetch ERC-20 balance from provider", error);
-    throw error;
+    // Handle specific error cases
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    // If it's a decode error (contract doesn't exist or wrong ABI), return 0
+    if (errorMessage.includes("could not decode result data") || 
+        errorMessage.includes("BAD_DATA") ||
+        errorMessage.includes("execution reverted")) {
+      logger.debug(`Failed to fetch ERC-20 balance (contract may not exist or be incompatible)`, {
+        chainId,
+        token: token.symbol,
+        tokenAddress: token.address,
+        wallet,
+        error: errorMessage,
+      });
+      return 0n;
+    }
+    
+    logger.error("Failed to fetch ERC-20 balance from provider", {
+      chainId,
+      token: token.symbol,
+      error: errorMessage,
+    });
+    // Return 0n instead of throwing to allow the application to continue
+    return 0n;
   }
 }

@@ -56,7 +56,7 @@ async function getBalancesSummary(address: Address): Promise<BalancesSummaryResp
     const chainId = Number(chainIdStr) as ChainId;
 
     // Get native balance and group by symbol
-    const nativeBalance = getNativeBalance(chainId, address);
+    const nativeBalance = await getNativeBalance(chainId, address);
     const nativeSymbol = chain.native.symbol;
     
     if (!nativeTokensBySymbol[nativeSymbol]) {
@@ -71,7 +71,7 @@ async function getBalancesSummary(address: Address): Promise<BalancesSummaryResp
     // Get USDC balance
     const usdcToken = chain.commonTokens.USDC;
     if (usdcToken) {
-      const usdcBalance = getErc20Balance(chainId, usdcToken, address);
+      const usdcBalance = await getErc20Balance(chainId, usdcToken, address);
       totalUsdcSmallestUnit += usdcBalance;
     }
   }
