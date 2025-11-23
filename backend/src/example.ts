@@ -192,7 +192,7 @@ async function example1_AutomaticPlanning() {
         bundlerUrl: "https://vnet.erc4337.io/bundler/8453", // ERC-4337 bundler for Base
       },
     ];
-    
+
     // Create EIL SDK configuration
     // Note: sourcePaymaster is optional - will be auto-added by ensurePaymasterConfig()
     const eilConfig = {
@@ -202,10 +202,10 @@ async function example1_AutomaticPlanning() {
       // sourcePaymaster is optional - will be automatically added if missing
       // This enables gas sponsorship for source chains
     };
-    
+
     // Initialize EIL SDK
     const sdk = new CrossChainSdk(eilConfig);
-    
+
     // Build EIL payload
     // ensurePaymasterConfig() will automatically add paymaster configuration if missing
     // This ensures gas sponsorship works even if paymaster wasn't explicitly configured

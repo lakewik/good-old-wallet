@@ -10,7 +10,7 @@ const server = http.createServer(async (req, res) => {
   // Enable CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, ngrok-skip-browser-warning");
 
   // Handle OPTIONS request
   if (req.method === "OPTIONS") {

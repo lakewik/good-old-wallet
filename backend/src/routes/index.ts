@@ -4,8 +4,8 @@
 export { handleAssetsRequest } from "./assets.js";
 export { handleVerifyRequest } from "./verify.js";
 export { handleSettleRequest } from "./settle.js";
-export { handleBalancesSummaryRequest } from "./balancesSummary.js";
-export { handlePlanSendingTransactionRequest } from "./planSendingTransaction.js";
+export { handleBalancesSummaryRequest } from "./balances-summary.js";
+export { handlePlanSendingTransactionRequest } from "./plan-sending-transaction.js";
 export { handleApiDocsRequest, handleSwaggerUIRequest } from "./swagger.js";
 export { handleTransactionsRequest } from "./transactions.js";
 

@@ -1,7 +1,7 @@
-import http from "http";
 import { logger } from "../setup/logger.js";
-import { getNativeBalance, getErc20Balance } from "../handlers/balances.js";
+import { getNativeBalance, getErc20Balance } from "../handlers/get-balances.js";
 import { ChainId, CHAINS, type Address } from "../index.js";
+import http from "http";
 
 interface ChainBalance {
   chainId: number;

@@ -9,7 +9,8 @@
     "dev": "tsx watch src/index.ts",
     "dev:server": "tsx watch src/server.ts",
     "start": "node dist/index.js",
-    "start:server": "node dist/server.js"
+    "start:server": "node dist/server.js",
+    "test:verify": "tsx src/scripts/test-verify-signature.ts"
   },
   "keywords": [
     "ethereum",
@@ -20,6 +21,9 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@aboutcircles/sdk-rpc": "^0.1.1",
+    "@safe-global/protocol-kit": "^6.1.2",
+    "@safe-global/safe-core-sdk-types": "^5.1.0",
     "@eil-protocol/accounts": "^0.1.2",
     "@eil-protocol/sdk": "^0.1.2",
     "dotenv": "^16.4.5",

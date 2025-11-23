@@ -1,6 +1,7 @@
 export enum ChainId {
   ETHEREUM = 1,
   OPTIMISM = 10,
+  GNOSIS = 100,
   ARBITRUM_ONE = 42161,
   BASE = 8453,
 }
