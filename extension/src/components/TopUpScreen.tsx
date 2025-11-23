@@ -27,7 +27,7 @@ export default function TopUpScreen({
   const [error, setError] = useState<string>("");
   const [txHash, setTxHash] = useState<string>("");
 
-  const BACKEND_URL = "http://localhost:7000";
+  const BACKEND_URL = "http://localhost:7001";
   const BACKEND_ADDRESS = "0x572E3a2d12163D8FACCF5385Ce363D152EA3A33E";
   const TOKEN_ADDRESS = "0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d"; // wxDAI on Gnosis
   const RPC_URL = "https://rpc.gnosischain.com";
@@ -40,7 +40,7 @@ export default function TopUpScreen({
       // Get user's private key
       const vault = new WalletVault();
       const accountIndex = await getSelectedAccountIndex();
-      
+
       let userPrivateKey: string = "";
       await vault.unlockAndExecute(
         password,
@@ -79,7 +79,7 @@ export default function TopUpScreen({
       // Check if Safe is deployed
       const isSafeDeployed = await safe.isSafeDeployed();
       console.log("Is Safe deployed:", isSafeDeployed);
-      
+
       if (!isSafeDeployed) {
         console.log("⚠️ Safe not deployed, will deploy with first transaction");
         // The Safe will be deployed automatically when we execute the first transaction
@@ -113,9 +113,29 @@ export default function TopUpScreen({
       // Sign the transaction
       const signedSafeTransaction = await safe.signTransaction(safeTransaction);
       const signature = signedSafeTransaction.signatures.get(ownerWallet.address.toLowerCase());
-      
+
       if (!signature) {
         throw new Error("Failed to get signature");
+      }
+
+      // Validate signature data
+      if (!signature.data) {
+        throw new Error("Signature data is missing");
+      }
+
+      // Ensure signature.data is a valid hex string
+      const signatureData = signature.data;
+      if (typeof signatureData !== 'string') {
+        throw new Error(`Invalid signature data type: ${typeof signatureData}`);
+      }
+
+      // Validate it's a hex string (starts with 0x and contains only hex characters)
+      if (!signatureData.startsWith('0x')) {
+        throw new Error(`Signature data must start with '0x', got: ${signatureData.substring(0, 50)}...`);
+      }
+
+      if (!/^0x[0-9a-fA-F]+$/.test(signatureData)) {
+        throw new Error(`Signature data contains invalid hex characters: ${signatureData.substring(0, 50)}...`);
       }
 
       // Create payload
@@ -137,7 +157,7 @@ export default function TopUpScreen({
             refundReceiver: safeTransaction.data.refundReceiver,
             nonce: safeTransaction.data.nonce.toString(),
           },
-          signatures: signature.data,
+          signatures: signatureData,
         },
       };
 
@@ -635,4 +655,3 @@ export default function TopUpScreen({
     </div>
   );
 }
-

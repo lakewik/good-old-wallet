@@ -80,21 +80,82 @@ export default function VintageWalletCheckout() {
       const wallet = new EthersWallet(inputValue)
       const userAddress = wallet.address
 
-      // Initialize user in database (get or create)
-      const initResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-        },
-        body: JSON.stringify({ userAddress }),
+      // Log environment variable and URL
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
+      const requestUrl = `${backendUrl}/user`
+      
+      console.log("[handleLogin] Starting user initialization", {
+        backendUrl,
+        requestUrl,
+        userAddress,
+        hasBackendUrl: !!backendUrl,
       })
 
-      if (!initResponse.ok) {
-        throw new Error("Failed to initialize user")
+      // Initialize user in database (get or create)
+      console.log("[handleLogin] Making fetch request", {
+        url: requestUrl,
+        method: "POST",
+        body: { userAddress },
+      })
+
+      let initResponse: Response
+      try {
+        initResponse = await fetch(requestUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true",
+          },
+          body: JSON.stringify({ userAddress }),
+        })
+
+        console.log("[handleLogin] Fetch response received", {
+          status: initResponse.status,
+          statusText: initResponse.statusText,
+          ok: initResponse.ok,
+          headers: Object.fromEntries(initResponse.headers.entries()),
+        })
+      } catch (fetchError) {
+        console.error("[handleLogin] Fetch request failed", {
+          error: fetchError,
+          errorMessage: fetchError instanceof Error ? fetchError.message : String(fetchError),
+          errorName: fetchError instanceof Error ? fetchError.name : "Unknown",
+          requestUrl,
+          backendUrl,
+        })
+        throw new Error(`Network error: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`)
       }
 
-      const initData = await initResponse.json()
+      if (!initResponse.ok) {
+        let errorBody = ""
+        try {
+          errorBody = await initResponse.text()
+          console.error("[handleLogin] Response not OK", {
+            status: initResponse.status,
+            statusText: initResponse.statusText,
+            errorBody,
+          })
+        } catch (e) {
+          console.error("[handleLogin] Failed to read error response body", e)
+        }
+        throw new Error(`Failed to initialize user: ${initResponse.status} ${initResponse.statusText}${errorBody ? ` - ${errorBody}` : ""}`)
+      }
+
+      let initData: any
+      try {
+        initData = await initResponse.json()
+        console.log("[handleLogin] Response parsed successfully", {
+          exists: initData.exists,
+          data: initData,
+        })
+      } catch (parseError) {
+        console.error("[handleLogin] Failed to parse response JSON", {
+          error: parseError,
+          status: initResponse.status,
+        })
+        throw new Error("Failed to parse server response")
+      }
+
       console.log(
         initData.exists ? "Existing user loaded" : "New user created",
         initData
@@ -106,7 +167,13 @@ export default function VintageWalletCheckout() {
       setIsAuthenticated(true)
       setInputValue("") // Clear the private key from input
     } catch (error) {
-      console.error("Login error:", error)
+      console.error("[handleLogin] Login error caught", {
+        error,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorName: error instanceof Error ? error.name : "Unknown",
+        errorStack: error instanceof Error ? error.stack : undefined,
+        backendUrl: process.env.NEXT_PUBLIC_BACKEND_URL,
+      })
       setStatus("auth_error")
     } finally {
       setIsLoading(false)

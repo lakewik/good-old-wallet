@@ -195,7 +195,7 @@ export class X402Service {
       logger.info("Verification passed, executing transaction...");
 
       // Execute the Safe transaction (gas estimation, execution, and confirmation)
-      const result = await executeSafeTx(this.wallet, paymentPayload);
+      const result = await executeSafeTx(this.wallet, paymentPayload, this.provider);
       
       if (result.settled) {
         logger.info("Payment settlement successful", {

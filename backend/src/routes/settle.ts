@@ -56,6 +56,28 @@ export async function handleSettleRequest(
         receiver: data.paymentPayload?.safeTx.to,
       });
 
+      // Log the full payload for debugging
+      logger.info("📦 Full payment payload received", {
+        scheme: data.paymentPayload?.scheme,
+        networkId: data.paymentPayload?.networkId,
+        safeAddress: data.paymentPayload?.safeAddress,
+        safeTx: {
+          from: data.paymentPayload?.safeTx?.from,
+          to: data.paymentPayload?.safeTx?.to,
+          value: data.paymentPayload?.safeTx?.value,
+          data: data.paymentPayload?.safeTx?.data?.substring(0, 66) + "...",
+          operation: data.paymentPayload?.safeTx?.operation,
+          safeTxGas: data.paymentPayload?.safeTx?.safeTxGas,
+          baseGas: data.paymentPayload?.safeTx?.baseGas,
+          gasPrice: data.paymentPayload?.safeTx?.gasPrice,
+          gasToken: data.paymentPayload?.safeTx?.gasToken,
+          refundReceiver: data.paymentPayload?.safeTx?.refundReceiver,
+          nonce: data.paymentPayload?.safeTx?.nonce,
+        },
+        signaturesLength: data.paymentPayload?.signatures?.length,
+        signaturesPreview: data.paymentPayload?.signatures?.substring(0, 66) + "...",
+      });
+
       // Call X402 service to settle payment
       const result = await x402Service.settlePayment(
         data.paymentPayload,
