@@ -143,10 +143,16 @@ async function main() {
     throw new Error(`❌ RPC URL not configured for ${chainConfig.name}`);
   }
 
-  // Step 3: Get or deploy Safe
-  console.log('\n📝 Step 3: Getting or deploying Safe (1-of-1 with your EOA)...');
+  // Step 3: Deploy a FRESH Safe (with nonce 0) for this test
+  console.log('\n📝 Step 3: Deploying FRESH Safe (1-of-1 with your EOA)...');
+  console.log('   🎲 Using random saltNonce for unique Safe address');
+  
+  // Use random saltNonce to create a unique Safe address each time
+  // This ensures the Safe always starts with nonce 0
+  const saltNonce = Math.floor(Math.random() * 1000000).toString();
+  console.log(`   🔑 SaltNonce: ${saltNonce}`);
 
-  // Create Safe instance with predicted address
+  // Create Safe instance with predicted address using saltNonce
   safe = await Safe.init({
     provider: rpcUrl,
     signer: process.env.BACKEND_PRIVATE_KEY!,
@@ -154,21 +160,24 @@ async function main() {
       safeAccountConfig: {
         owners: [ownerWallet.address],
         threshold: 1
+      },
+      safeDeploymentConfig: {
+        saltNonce: saltNonce  // This makes each Safe unique!
       }
     }
   });
     
   safeAddress = await safe.getAddress();
-  console.log(`   📍 Predicted Safe Address: ${safeAddress}`);
+  console.log(`   📍 New Safe Address: ${safeAddress}`);
   
-  // Check if Safe is already deployed
+  // Check if this Safe is already deployed (it shouldn't be with random salt)
   const code = await provider!.getCode(safeAddress);
   const isDeployed = code !== '0x';
   
   if (isDeployed) {
-    console.log(`   ✅ Safe already deployed - reusing existing Safe`);
+    console.log(`   ⚠️  Safe already exists (rare with random salt)`);
   } else {
-    console.log(`   🚀 Safe not deployed yet - deploying now...`);
+    console.log(`   🚀 Deploying new Safe...`);
     console.log(`   ⏳ This may take a minute...`);
     
     // Deploy the Safe
@@ -183,17 +192,22 @@ async function main() {
     await txResponse.wait();
     console.log(`   ✅ Safe deployed successfully!`);
   }
+  
+  console.log(`\n   💡 NOTE: This Safe is FRESH with nonce 0 - no nonce conflicts!`);
 
   // Verify Safe configuration
   const owners = await safe.getOwners();
   const threshold = await safe.getThreshold();
-  const nonce = await safe.getNonce();
+  const currentNonce = await safe.getNonce();
   
   console.log(`\n📋 Safe Configuration:`);
   console.log(`   Address: ${safeAddress}`);
   console.log(`   Owners: ${owners.join(', ')}`);
   console.log(`   Threshold: ${threshold}`);
-  console.log(`   Nonce: ${nonce}`);
+  console.log(`   Current Nonce: ${currentNonce}`);
+  
+  // Important: The Safe SDK will automatically use the current nonce when creating transactions
+  console.log(`\n⚠️  NOTE: This transaction will use nonce ${currentNonce}`);
   
   // Check Safe's token balance BEFORE
   const safeTokenBalanceBefore = await tokenContract.balanceOf(safeAddress);
@@ -261,6 +275,9 @@ async function main() {
   });
 
   console.log(`✅ Safe transaction created`);
+  console.log(`   Transaction Nonce: ${safeTransaction.data.nonce}`);
+  console.log(`   To: ${safeTransaction.data.to}`);
+  console.log(`   Value: ${safeTransaction.data.value}`);
 
   // Step 7: Sign the transaction
   console.log('\n📝 Step 7: Signing transaction with EOA...');
@@ -274,8 +291,24 @@ async function main() {
   console.log('\n📝 Step 8: Preparing payload for /settle endpoint...');
   
   // Extract signatures
+  // IMPORTANT: Safe requires signatures to be sorted by signer address (ascending)
   const signaturesArray = Array.from(signedTransaction.signatures.values());
-  const concatenatedSignatures = signaturesArray
+  
+  // Sort by signer address (Safe requirement)
+  const sortedSignatures = signaturesArray.sort((a, b) => {
+    const addrA = a.signer.toLowerCase();
+    const addrB = b.signer.toLowerCase();
+    return addrA < addrB ? -1 : addrA > addrB ? 1 : 0;
+  });
+  
+  console.log('   📝 Signature Details:');
+  sortedSignatures.forEach((sig, idx) => {
+    console.log(`     ${idx + 1}. Signer: ${sig.signer}`);
+    console.log(`        Data: ${sig.data.substring(0, 66)}...`);
+    console.log(`        Length: ${sig.data.length} chars`);
+  });
+  
+  const concatenatedSignatures = sortedSignatures
     .map(sig => sig.data)
     .join('');
 
@@ -302,6 +335,11 @@ async function main() {
   };
 
   console.log(`✅ Payload prepared`);
+  console.log(`\n   📊 Payload Summary:`);
+  console.log(`     Safe: ${safeAddress}`);
+  console.log(`     Nonce: ${safeTransaction.data.nonce}`);
+  console.log(`     Signatures: ${concatenatedSignatures.length} chars`);
+  console.log(`     Sig Preview: ${concatenatedSignatures.substring(0, 66)}...${concatenatedSignatures.substring(concatenatedSignatures.length - 10)}`);
 
   // Step 9: Send to /settle endpoint
   console.log(`\n📝 Step 9: Sending to ${CONFIG.SETTLE_ENDPOINT}...`);
