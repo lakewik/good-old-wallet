@@ -8,6 +8,8 @@ import {
   deleteAccount,
   getAllAccountColors,
   setAccountColor,
+  getAllAccountNames,
+  setAccountName,
 } from "../utils/storage";
 import { deriveWalletFromPhrase, getAccountLabel, formatAddress } from "../utils/accountManager";
 import { WalletVault } from "../utils/WalletVault";
@@ -28,11 +30,14 @@ export default function AccountSelector({
   const [accountIndices, setAccountIndices] = useState<number[]>([0]);
   const [accountAddresses, setAccountAddresses] = useState<Record<number, string>>({});
   const [accountColors, setAccountColors] = useState<Record<number, string>>({});
+  const [accountNames, setAccountNames] = useState<Record<number, string>>({});
   const [isOpen, setIsOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(true);
   const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
   const [editingColorIndex, setEditingColorIndex] = useState<number | null>(null);
+  const [editingNameIndex, setEditingNameIndex] = useState<number | null>(null);
+  const [editingNameValue, setEditingNameValue] = useState<string>("");
 
   useEffect(() => {
     loadAccounts();
@@ -63,16 +68,18 @@ export default function AccountSelector({
       setIsLoadingAddresses(true);
       console.log("Starting to load accounts...");
       
-      const [currentIndex, indices, colors] = await Promise.all([
+      const [currentIndex, indices, colors, names] = await Promise.all([
         getSelectedAccountIndex(),
         getAccountIndices(),
         getAllAccountColors(),
+        getAllAccountNames(),
       ]);
       
-      console.log("Loaded account data:", { currentIndex, indices, colors });
+      console.log("Loaded account data:", { currentIndex, indices, colors, names });
       setSelectedIndex(currentIndex);
       setAccountIndices(indices);
       setAccountColors(colors);
+      setAccountNames(names);
       
       // Derive addresses for all active accounts
       if (indices.length > 0) {
@@ -353,7 +360,7 @@ export default function AccountSelector({
               flexShrink: 0,
             }}
           />
-          <span>{getAccountLabel(selectedIndex)}</span>
+          <span>{getAccountLabel(selectedIndex, accountNames[selectedIndex])}</span>
         </div>
         {isLoadingAddresses ? (
           <span style={{ color: "var(--text-muted)", fontStyle: "italic", fontSize: "10px" }}>
@@ -485,11 +492,69 @@ export default function AccountSelector({
                         />
                         <div
                           style={{
-                            fontWeight: isSelected ? 600 : 400,
-                            fontSize: "12px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            flex: 1,
                           }}
                         >
-                          {getAccountLabel(accountIndex)}
+                          {editingNameIndex === accountIndex ? (
+                            <input
+                              type="text"
+                              value={editingNameValue}
+                              onChange={(e) => setEditingNameValue(e.target.value)}
+                              onBlur={async () => {
+                                if (editingNameValue.trim()) {
+                                  await setAccountName(accountIndex, editingNameValue.trim());
+                                  setAccountNames(prev => ({ ...prev, [accountIndex]: editingNameValue.trim() }));
+                                }
+                                setEditingNameIndex(null);
+                                setEditingNameValue("");
+                              }}
+                              onKeyDown={async (e) => {
+                                if (e.key === "Enter") {
+                                  if (editingNameValue.trim()) {
+                                    await setAccountName(accountIndex, editingNameValue.trim());
+                                    setAccountNames(prev => ({ ...prev, [accountIndex]: editingNameValue.trim() }));
+                                  }
+                                  setEditingNameIndex(null);
+                                  setEditingNameValue("");
+                                } else if (e.key === "Escape") {
+                                  setEditingNameIndex(null);
+                                  setEditingNameValue("");
+                                }
+                              }}
+                              autoFocus
+                              style={{
+                                background: "rgba(255, 255, 255, 0.1)",
+                                border: "1px solid rgba(255, 255, 255, 0.2)",
+                                borderRadius: "4px",
+                                padding: "2px 6px",
+                                color: "var(--text-primary)",
+                                fontSize: "12px",
+                                fontFamily: "var(--font-family-sans)",
+                                width: "100%",
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                fontWeight: isSelected ? 600 : 400,
+                                fontSize: "12px",
+                                cursor: "pointer",
+                                flex: 1,
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingNameIndex(accountIndex);
+                                setEditingNameValue(accountNames[accountIndex] || "");
+                              }}
+                              title="Click to edit name"
+                            >
+                              {getAccountLabel(accountIndex, accountNames[accountIndex])}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div

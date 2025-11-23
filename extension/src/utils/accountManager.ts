@@ -43,8 +43,12 @@ export async function deriveWalletFromPhrase(
 
 /**
  * Get account label (default: "Account 1", "Account 2", etc.)
+ * Can be overridden with a custom name
  */
-export function getAccountLabel(accountIndex: number): string {
+export function getAccountLabel(accountIndex: number, customName?: string | null): string {
+  if (customName) {
+    return customName;
+  }
   return `Account ${accountIndex + 1}`;
 }
 

@@ -17,6 +17,7 @@ import AccountSelector from "./AccountSelector";
 import type { EncryptedVault } from "../utils/WalletVault";
 import SendScreen from "./SendScreen";
 import PendingTransactionCard from "./PendingTransactionCard";
+import FilecoinBackupButton from "./FilecoinBackupButton";
 import {
   getBalancesSummary,
   ApiError,
@@ -889,6 +890,7 @@ export default function PortfolioScreen({
           </div>
         </div>
       </div>
+      <FilecoinBackupButton password={password} encryptedVault={encryptedVault} />
     </div>
   );
 }

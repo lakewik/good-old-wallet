@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
   ACCOUNT_COUNT: "account_count",
   ACCOUNT_INDICES: "account_indices", // List of active account indices
   ACCOUNT_COLORS: "account_colors", // Mapping of accountIndex -> color
+  ACCOUNT_NAMES: "account_names", // Mapping of accountIndex -> name
 } as const;
 
 export interface StoredWalletData {
@@ -424,6 +425,82 @@ export async function setAccountColor(accountIndex: number, color: string): Prom
             reject(
               new Error(
                 `Failed to save account color: ${chrome.runtime.lastError.message}`,
+              ),
+            );
+          } else {
+            resolve();
+          }
+        },
+      );
+    });
+  });
+}
+
+/**
+ * Get the name for a specific account
+ */
+export async function getAccountName(accountIndex: number): Promise<string | null> {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get([STORAGE_KEYS.ACCOUNT_NAMES], (result) => {
+      if (chrome.runtime.lastError) {
+        reject(
+          new Error(
+            `Failed to retrieve account name: ${chrome.runtime.lastError.message}`,
+          ),
+        );
+      } else {
+        const names = result[STORAGE_KEYS.ACCOUNT_NAMES] as Record<number, string> | undefined;
+        resolve(names?.[accountIndex] || null);
+      }
+    });
+  });
+}
+
+/**
+ * Get all account names
+ */
+export async function getAllAccountNames(): Promise<Record<number, string>> {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get([STORAGE_KEYS.ACCOUNT_NAMES], (result) => {
+      if (chrome.runtime.lastError) {
+        reject(
+          new Error(
+            `Failed to retrieve account names: ${chrome.runtime.lastError.message}`,
+          ),
+        );
+      } else {
+        const names = result[STORAGE_KEYS.ACCOUNT_NAMES] as Record<number, string> | undefined;
+        resolve(names || {});
+      }
+    });
+  });
+}
+
+/**
+ * Set the name for a specific account
+ */
+export async function setAccountName(accountIndex: number, name: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get([STORAGE_KEYS.ACCOUNT_NAMES], (result) => {
+      if (chrome.runtime.lastError) {
+        reject(
+          new Error(
+            `Failed to retrieve account names: ${chrome.runtime.lastError.message}`,
+          ),
+        );
+        return;
+      }
+      
+      const names = (result[STORAGE_KEYS.ACCOUNT_NAMES] as Record<number, string> | undefined) || {};
+      const updatedNames = { ...names, [accountIndex]: name };
+      
+      chrome.storage.local.set(
+        { [STORAGE_KEYS.ACCOUNT_NAMES]: updatedNames },
+        () => {
+          if (chrome.runtime.lastError) {
+            reject(
+              new Error(
+                `Failed to save account name: ${chrome.runtime.lastError.message}`,
               ),
             );
           } else {
