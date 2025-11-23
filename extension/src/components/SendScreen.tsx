@@ -6,6 +6,7 @@ import ConfirmationScreen from "./ConfirmationScreen";
 import {
   planSendingTransaction,
   normalizeTransactionPlanWithAmount,
+  getAssets,
   ApiError,
   type PlanRequest,
 } from "../utils/api";
@@ -61,12 +62,13 @@ export default function SendScreen({
   const isValidAmount = amount !== "" && enteredAmount > 0 && !exceedsBalance;
   const isValidAddress = address.trim().length > 0;
   const isUsdcToken = token.symbol.toUpperCase() === "USDC";
+  const isEthToken = token.symbol.toUpperCase() === "ETH";
   const canSend =
     isValidAmount &&
     isValidAddress &&
     !exceedsBalance &&
     !isLoading &&
-    isUsdcToken;
+    (isUsdcToken || isEthToken);
 
   const handleMaxClick = () => {
     setAmount(token.amount);
@@ -106,42 +108,102 @@ export default function SendScreen({
         return;
       }
 
-      // Validate token is USDC
-      if (token.symbol.toUpperCase() !== "USDC") {
-        setError("Only USDC transfers are currently supported");
-        setIsLoading(false);
-        return;
-      }
+      const tokenSymbolUpper = token.symbol.toUpperCase();
+      let normalizedPlan: TransactionPlan | null = null;
 
-      // Prepare API request
-      const planRequest: PlanRequest = {
-        sourceAddress,
-        destinationAddress: address.trim(),
-        amount: amount,
-        tokenName: "USDC",
-      };
+      if (tokenSymbolUpper === "USDC") {
+        // USDC: Use backend API for planning
+        const planRequest: PlanRequest = {
+          sourceAddress,
+          destinationAddress: address.trim(),
+          amount: amount,
+          tokenName: "USDC",
+        };
 
-      // Call API to plan transaction
-      const response = await planSendingTransaction(planRequest);
+        // Call API to plan transaction
+        const response = await planSendingTransaction(planRequest);
 
-      if (!response.success || !response.plan) {
-        // No viable plan found
-        setError(
-          response.message ||
-            "No viable plan found. Insufficient balance across all chains.",
+        if (!response.success || !response.plan) {
+          // No viable plan found
+          setError(
+            response.message ||
+              "No viable plan found. Insufficient balance across all chains.",
+          );
+          setIsLoading(false);
+          return;
+        }
+
+        // Normalize the plan response to match UI expectations
+        normalizedPlan = normalizeTransactionPlanWithAmount(
+          response.plan,
+          amount,
         );
-        setIsLoading(false);
-        return;
-      }
 
-      // Normalize the plan response to match UI expectations
-      const normalizedPlan = normalizeTransactionPlanWithAmount(
-        response.plan,
-        amount,
-      );
+        if (!normalizedPlan) {
+          setError("Failed to process transaction plan");
+          setIsLoading(false);
+          return;
+        }
+      } else if (tokenSymbolUpper === "ETH") {
+        // ETH: Create plan directly from assets
+        const assets = await getAssets(sourceAddress);
+        const requestedAmountEth = parseFloat(amount);
+        const requestedAmountWei = BigInt(Math.floor(requestedAmountEth * 1e18));
 
-      if (!normalizedPlan) {
-        setError("Failed to process transaction plan");
+        // Find chains with sufficient ETH balance
+        const legs: TransactionLeg[] = [];
+        let remainingAmount = requestedAmountWei;
+        let totalGasCostUsdc = BigInt(0);
+
+        // Estimate gas cost (rough estimate: 21000 gas * 20 gwei = 0.00042 ETH per transfer)
+        // Convert to USDC (rough estimate: 1 ETH = $2500, so 0.00042 ETH = ~$1.05 = ~1.05 USDC)
+        const estimatedGasWei = BigInt("420000000000000"); // 0.00042 ETH
+        const estimatedGasUsdc = BigInt("1050000"); // ~1.05 USDC (6 decimals)
+
+        for (const chain of assets.chains) {
+          if (remainingAmount <= 0n) break;
+
+          const chainBalanceWei = BigInt(chain.native.balance);
+          // Reserve some ETH for gas (keep at least 0.001 ETH for gas)
+          const minReserveWei = BigInt("1000000000000000"); // 0.001 ETH
+          const availableWei = chainBalanceWei > minReserveWei 
+            ? chainBalanceWei - minReserveWei 
+            : 0n;
+
+          if (availableWei > 0n) {
+            const amountToSend = availableWei < remainingAmount 
+              ? availableWei 
+              : remainingAmount;
+            
+            // Convert to ETH string (18 decimals)
+            const amountEth = (Number(amountToSend) / 1e18).toString();
+            
+            legs.push({
+              chainId: chain.chainId,
+              chainName: chain.chainName,
+              amountUsdc: amountToSend.toString(), // Store as wei string (will be interpreted as native ETH)
+              gasCostUsdc: estimatedGasUsdc.toString(),
+            });
+
+            totalGasCostUsdc += estimatedGasUsdc;
+            remainingAmount -= amountToSend;
+          }
+        }
+
+        if (remainingAmount > 0n) {
+          setError("Insufficient ETH balance across all chains");
+          setIsLoading(false);
+          return;
+        }
+
+        normalizedPlan = {
+          type: legs.length === 1 ? "single" : "multi",
+          legs,
+          totalAmount: requestedAmountWei.toString(),
+          totalGasCostUsdc: totalGasCostUsdc.toString(),
+        };
+      } else {
+        setError(`Token ${token.symbol} is not supported. Only USDC and ETH are supported.`);
         setIsLoading(false);
         return;
       }
@@ -474,23 +536,6 @@ export default function SendScreen({
           />
         </div>
 
-        {/* Token Support Warning */}
-        {!isUsdcToken && (
-          <div
-            style={{
-              width: "100%",
-              padding: "var(--spacing-md)",
-              background: "rgba(255, 193, 7, 0.1)",
-              border: "1px solid rgba(255, 193, 7, 0.3)",
-              borderRadius: "var(--border-radius)",
-              color: "#ffc107",
-              fontSize: "12px",
-              marginBottom: "var(--spacing-md)",
-            }}
-          >
-            Only USDC transfers are currently supported.
-          </div>
-        )}
 
         {/* Error Message */}
         {error && (

@@ -12,6 +12,6 @@
   "web_accessible_resources": [],
   "permissions": ["storage"],
   "host_permissions": [
-    "https://595b85c58418.ngrok-free.app/*"
+    "https://guppy-saving-mistakenly.ngrok-free.app/*"
   ]
 }

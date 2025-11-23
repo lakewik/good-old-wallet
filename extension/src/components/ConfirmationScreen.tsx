@@ -33,6 +33,8 @@ interface ConfirmationScreenProps {
   onApprove: () => void;
   onCancel: () => void;
   onTransactionSaved?: () => void;
+  password: string;
+  encryptedVault: any;
 }
 
 function formatUsdc(amount: string): string {
@@ -56,12 +58,42 @@ function formatUsdc(amount: string): string {
   }
 }
 
+function formatEth(amount: string): string {
+  // Convert from wei (18 decimals) to ETH
+  try {
+    const amountNum = BigInt(amount);
+    const divisor = BigInt("1000000000000000000"); // 10^18
+    const whole = amountNum / divisor;
+    const fraction = amountNum % divisor;
+    const fractionStr = fraction.toString().padStart(18, "0");
+    // Remove trailing zeros
+    const fractionTrimmed = fractionStr.replace(/0+$/, "");
+    if (fractionTrimmed === "") {
+      return whole.toString();
+    }
+    return `${whole}.${fractionTrimmed}`;
+  } catch (error) {
+    // Fallback to simple division if BigInt fails
+    const amountNum = parseFloat(amount) / 1e18;
+    return amountNum.toFixed(18).replace(/\.?0+$/, "");
+  }
+}
+
+function formatAmount(amount: string, tokenSymbol: string): string {
+  if (tokenSymbol.toUpperCase() === "ETH") {
+    return formatEth(amount);
+  }
+  return formatUsdc(amount);
+}
+
 function CollapsibleTransactionCard({
   leg,
   index,
+  tokenSymbol,
 }: {
   leg: TransactionLeg;
   index: number;
+  tokenSymbol: string;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -123,7 +155,7 @@ function CollapsibleTransactionCard({
               whiteSpace: "nowrap",
             }}
           >
-            {formatUsdc(leg.amountUsdc)} USDC
+            {formatAmount(leg.amountUsdc, tokenSymbol)} {tokenSymbol}
           </div>
         </div>
         <svg
@@ -210,7 +242,7 @@ function CollapsibleTransactionCard({
                 fontFamily: "var(--font-family-mono)",
               }}
             >
-              {formatUsdc(leg.amountUsdc)} USDC
+              {formatAmount(leg.amountUsdc, tokenSymbol)} {tokenSymbol}
             </div>
           </div>
           <div
@@ -269,6 +301,7 @@ export default function ConfirmationScreen({
       const executionParams: ExecuteTransactionPlanParams = {
         plan,
         recipientAddress,
+        tokenSymbol,
         password,
         encryptedVault,
       };
@@ -498,7 +531,7 @@ export default function ConfirmationScreen({
               )}
             </div>
             {plan.legs.map((leg, index) => (
-              <CollapsibleTransactionCard key={index} leg={leg} index={index} />
+              <CollapsibleTransactionCard key={index} leg={leg} index={index} tokenSymbol={tokenSymbol} />
             ))}
           </div>
 
@@ -539,7 +572,7 @@ export default function ConfirmationScreen({
                   fontFamily: "var(--font-family-mono)",
                 }}
               >
-                {formatUsdc(plan.totalAmount)} USDC
+                {formatAmount(plan.totalAmount, tokenSymbol)} {tokenSymbol}
               </div>
             </div>
             <div

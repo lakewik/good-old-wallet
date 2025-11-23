@@ -1,9 +1,13 @@
 export enum ChainId {
   ETHEREUM = 1,
+  ETHEREUM_SEPOLIA = 11155111,
   OPTIMISM = 10,
+  OPTIMISM_SEPOLIA = 11155420,
   GNOSIS = 100,
   ARBITRUM_ONE = 42161,
+  ARBITRUM_SEPOLIA = 421614,
   BASE = 8453,
+  BASE_SEPOLIA = 84532,
 }
 
 export type Address = `0x${string}`;

@@ -54,11 +54,14 @@ export interface PlanRequest {
 
 export interface SingleChainPlan {
   type: "single";
-  quote: {
+  legs: Array<{
     chainId: number;
     chainName: string;
+    amountUsdc: string;
     gasCostUsdc: string;
-  };
+  }>;
+  totalAmount: string;
+  totalGasCostUsdc: string;
 }
 
 export interface MultiChainPlan {
@@ -263,23 +266,12 @@ export function normalizeTransactionPlan(
   }
 
   if (plan.type === "single") {
-    // Convert single-chain plan to normalized format
-    // For single-chain, the total amount needs to be calculated from the request
-    // But we'll use the gas cost structure and assume the amount is handled separately
-    // Actually, for single-chain, we need the amount from the request, but we'll structure it
-    // to match the multi-chain format for UI consistency
+    // Single-chain plan now has the same structure as multi-chain
     return {
       type: "single",
-      legs: [
-        {
-          chainId: plan.quote.chainId,
-          chainName: plan.quote.chainName,
-          amountUsdc: "0", // Will be set by caller based on request amount
-          gasCostUsdc: plan.quote.gasCostUsdc,
-        },
-      ],
-      totalAmount: "0", // Will be set by caller
-      totalGasCostUsdc: plan.quote.gasCostUsdc,
+      legs: plan.legs,
+      totalAmount: plan.totalAmount,
+      totalGasCostUsdc: plan.totalGasCostUsdc,
     };
   }
 
@@ -305,23 +297,13 @@ export function normalizeTransactionPlanWithAmount(
   }
 
   if (plan.type === "single") {
-    // Convert amount to smallest unit (6 decimals for USDC)
-    const amountInSmallestUnit = Math.floor(
-      parseFloat(requestAmount) * 1000000
-    ).toString();
-
+    // Single-chain plan now has the same structure as multi-chain
+    // The API already provides the amounts in the correct format
     return {
       type: "single",
-      legs: [
-        {
-          chainId: plan.quote.chainId,
-          chainName: plan.quote.chainName,
-          amountUsdc: amountInSmallestUnit,
-          gasCostUsdc: plan.quote.gasCostUsdc,
-        },
-      ],
-      totalAmount: amountInSmallestUnit,
-      totalGasCostUsdc: plan.quote.gasCostUsdc,
+      legs: plan.legs,
+      totalAmount: plan.totalAmount,
+      totalGasCostUsdc: plan.totalGasCostUsdc,
     };
   }
 

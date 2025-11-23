@@ -2,10 +2,94 @@ import { ChainId, ChainConfig, NATIVE_TOKEN_ADDRESS } from "./types.js";
 import { logger } from "./logger.js";
 
 export const CHAINS: Record<ChainId, ChainConfig> = {
-  [ChainId.ETHEREUM]: {
-    id: ChainId.ETHEREUM,
-    name: "Ethereum",
-    rpcUrl: process.env.RPC_ETHEREUM!,
+  // Mainnet chains (commented out)
+  // [ChainId.ETHEREUM]: {
+  //   id: ChainId.ETHEREUM,
+  //   name: "Ethereum",
+  //   rpcUrl: process.env.RPC_ETHEREUM!,
+  //   native: {
+  //     symbol: "ETH",
+  //     decimals: 18,
+  //     address: NATIVE_TOKEN_ADDRESS,
+  //     isNative: true,
+  //   },
+  //   commonTokens: {
+  //     USDC: {
+  //       symbol: "USDC",
+  //       decimals: 6,
+  //       // Ethereum USDC
+  //       address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  //     },
+  //   },
+  //   // e.g. keep at least 0.03 ETH (~few swaps + sends)
+  //   minNativeBalance: BigInt("30000000000000000"), // 0.03 ETH
+  // },
+  // [ChainId.ARBITRUM_ONE]: {
+  //   id: ChainId.ARBITRUM_ONE,
+  //   name: "Arbitrum One",
+  //   rpcUrl: process.env.RPC_ARBITRUM!,
+  //   native: {
+  //     symbol: "ETH",
+  //     decimals: 18,
+  //     address: NATIVE_TOKEN_ADDRESS,
+  //     isNative: true,
+  //   },
+  //   commonTokens: {
+  //     USDC: {
+  //       symbol: "USDC",
+  //       decimals: 6,
+  //       // Native USDC on Arbitrum One
+  //       address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+  //     },
+  //   },
+  //   minNativeBalance: BigInt("5000000000000000"), // 0.005 ETH
+  // },
+  // [ChainId.BASE]: {
+  //   id: ChainId.BASE,
+  //   name: "Base",
+  //   rpcUrl: process.env.RPC_BASE!,
+  //   native: {
+  //     symbol: "ETH",
+  //     decimals: 18,
+  //     address: NATIVE_TOKEN_ADDRESS,
+  //     isNative: true,
+  //   },
+  //   commonTokens: {
+  //     USDC: {
+  //       symbol: "USDC",
+  //       decimals: 6,
+  //       // Native USDC on Base
+  //       address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  //     },
+  //   },
+  //   minNativeBalance: BigInt("3000000000000000"), // 0.003 ETH
+  // },
+  // [ChainId.OPTIMISM]: {
+  //   id: ChainId.OPTIMISM,
+  //   name: "Optimism",
+  //   rpcUrl: process.env.RPC_OPTIMISM!,
+  //   native: {
+  //     symbol: "ETH",
+  //     decimals: 18,
+  //     address: NATIVE_TOKEN_ADDRESS,
+  //     isNative: true,
+  //   },
+  //   commonTokens: {
+  //     USDC: {
+  //       symbol: "USDC",
+  //       decimals: 6,
+  //       // Native USDC on OP Mainnet
+  //       address: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+  //     },
+  //   },
+  //   minNativeBalance: BigInt("3000000000000000"), // 0.003 ETH
+  // },
+
+  // Sepolia testnet chains
+  [ChainId.ETHEREUM_SEPOLIA]: {
+    id: ChainId.ETHEREUM_SEPOLIA,
+    name: "Ethereum Sepolia",
+    rpcUrl: process.env.RPC_ETHEREUM_SEPOLIA || process.env.RPC_ETHEREUM!,
     native: {
       symbol: "ETH",
       decimals: 18,
@@ -16,17 +100,16 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       USDC: {
         symbol: "USDC",
         decimals: 6,
-        // Ethereum USDC
-        address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        // Ethereum Sepolia USDC
+        address: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
       },
     },
-    // e.g. keep at least 0.03 ETH (~few swaps + sends)
-    minNativeBalance: BigInt("30000000000000000"), // 0.03 ETH
+    minNativeBalance: BigInt("10000000000000000"), // 0.01 ETH
   },
-  [ChainId.ARBITRUM_ONE]: {
-    id: ChainId.ARBITRUM_ONE,
-    name: "Arbitrum One",
-    rpcUrl: process.env.RPC_ARBITRUM!,
+  [ChainId.ARBITRUM_SEPOLIA]: {
+    id: ChainId.ARBITRUM_SEPOLIA,
+    name: "Arbitrum Sepolia",
+    rpcUrl: process.env.RPC_ARBITRUM_SEPOLIA || process.env.RPC_ARBITRUM!,
     native: {
       symbol: "ETH",
       decimals: 18,
@@ -37,16 +120,16 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       USDC: {
         symbol: "USDC",
         decimals: 6,
-        // Native USDC on Arbitrum One
-        address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+        // Arbitrum Sepolia USDC
+        address: "0x75faf114eafb1BDbe2F0316DF893fd58cE45AF0F",
       },
     },
     minNativeBalance: BigInt("5000000000000000"), // 0.005 ETH
   },
-  [ChainId.BASE]: {
-    id: ChainId.BASE,
-    name: "Base",
-    rpcUrl: process.env.RPC_BASE!,
+  [ChainId.BASE_SEPOLIA]: {
+    id: ChainId.BASE_SEPOLIA,
+    name: "Base Sepolia",
+    rpcUrl: process.env.RPC_BASE_SEPOLIA || process.env.RPC_BASE!,
     native: {
       symbol: "ETH",
       decimals: 18,
@@ -57,17 +140,16 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       USDC: {
         symbol: "USDC",
         decimals: 6,
-        // Native USDC on Base
-        address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        // Base Sepolia USDC
+        address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
       },
     },
     minNativeBalance: BigInt("3000000000000000"), // 0.003 ETH
   },
-
-  [ChainId.OPTIMISM]: {
-    id: ChainId.OPTIMISM,
-    name: "Optimism",
-    rpcUrl: process.env.RPC_OPTIMISM!,
+  [ChainId.OPTIMISM_SEPOLIA]: {
+    id: ChainId.OPTIMISM_SEPOLIA,
+    name: "Optimism Sepolia",
+    rpcUrl: process.env.RPC_OPTIMISM_SEPOLIA || process.env.RPC_OPTIMISM!,
     native: {
       symbol: "ETH",
       decimals: 18,
@@ -78,8 +160,8 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       USDC: {
         symbol: "USDC",
         decimals: 6,
-        // Native USDC on OP Mainnet
-        address: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+        // Optimism Sepolia USDC
+        address: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
       },
     },
     minNativeBalance: BigInt("3000000000000000"), // 0.003 ETH
