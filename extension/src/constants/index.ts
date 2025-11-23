@@ -15,4 +15,5 @@ export const BUTTON_LABELS = {
 } as const;
 
 // API Configuration
-export const API_BASE_URL = "https://guppy-saving-mistakenly.ngrok-free.app";
+// export const API_BASE_URL = "https://guppy-saving-mistakenly.ngrok-free.app";
+export const API_BASE_URL = "http://localhost:7000";

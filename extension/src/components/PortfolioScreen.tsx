@@ -18,11 +18,11 @@ import type { EncryptedVault } from "../utils/WalletVault";
 import SendScreen from "./SendScreen";
 import PendingTransactionCard from "./PendingTransactionCard";
 import FilecoinBackupButton from "./FilecoinBackupButton";
+import TopUpScreen from "./TopUpScreen";
 import {
   getBalancesSummary,
   ApiError,
 } from "../utils/api";
-import { getBlockExplorerUrl } from "../utils/blockExplorers";
 
 interface PortfolioScreenProps {
   password: string;
@@ -217,6 +217,7 @@ export default function PortfolioScreen({
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
+  const [showTopUp, setShowTopUp] = useState(false);
   const [pendingTransactions, setPendingTransactions] = useState<
     PendingTransaction[]
   >([]);
@@ -263,7 +264,7 @@ export default function PortfolioScreen({
           (window as any)[timeoutKey] = setTimeout(async () => {
             const updated = await getPendingTransactions();
             const txIndex = updated.findIndex((t) => t.id === tx.id);
-            if (txIndex !== -1 && updated[txIndex].status === "pending") {
+            if (txIndex !== -1 && updated[txIndex]?.status === "pending") {
               const updatedTx = { ...updated[txIndex] };
               
               // Update sub-transactions: only mark pending ones as success, keep failed ones as failed
@@ -469,7 +470,7 @@ export default function PortfolioScreen({
   // Helper function to convert hex color to RGB string for rgba
   const hexToRgb = (hex: string): string => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    if (result) {
+    if (result && result[1] && result[2] && result[3]) {
       const r = parseInt(result[1], 16);
       const g = parseInt(result[2], 16);
       const b = parseInt(result[3], 16);
@@ -489,6 +490,16 @@ export default function PortfolioScreen({
 
   const handleCancelSend = () => {
     setSelectedToken(null);
+  };
+
+  const handleTopUpClick = () => {
+    setShowTopUp(true);
+  };
+
+  const handleBackFromTopUp = () => {
+    setShowTopUp(false);
+    loadPendingTransactions(); // Reload transactions after top-up
+    loadWalletData(); // Reload wallet data to refresh balances
   };
 
   if (isLoading) {
@@ -556,6 +567,17 @@ export default function PortfolioScreen({
           Retry
         </button>
       </div>
+    );
+  }
+
+  // Show top-up screen if requested
+  if (showTopUp) {
+    return (
+      <TopUpScreen
+        onBack={handleBackFromTopUp}
+        password={password}
+        encryptedVault={encryptedVault}
+      />
     );
   }
 
@@ -789,6 +811,51 @@ export default function PortfolioScreen({
               )}
             </div>
           </div>
+
+          {/* Top Up Button */}
+          <button
+            onClick={handleTopUpClick}
+            style={{
+              width: "100%",
+              padding: "var(--spacing-md)",
+              background: `rgba(${hexToRgb(accountColor)}, 0.1)`,
+              border: `1px solid rgba(${hexToRgb(accountColor)}, 0.3)`,
+              borderRadius: "var(--border-radius)",
+              color: accountColor,
+              fontSize: "12px",
+              fontWeight: 600,
+              fontFamily: "var(--font-family-sans)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "var(--spacing-xs)",
+              transition: "all var(--transition-fast)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = `rgba(${hexToRgb(accountColor)}, 0.15)`;
+              e.currentTarget.style.borderColor = `rgba(${hexToRgb(accountColor)}, 0.5)`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = `rgba(${hexToRgb(accountColor)}, 0.1)`;
+              e.currentTarget.style.borderColor = `rgba(${hexToRgb(accountColor)}, 0.3)`;
+            }}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            <span>Top Up Funds</span>
+          </button>
 
           {/* Recent Transactions */}
           {pendingTransactions.length > 0 && (

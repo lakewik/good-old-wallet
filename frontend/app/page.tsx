@@ -131,9 +131,12 @@ export default function VintageWalletCheckout() {
 
       console.log("Opening wallet extension with payment request:", paymentRequest)
 
-      // Get extension ID from environment or use a known ID
-      // You'll need to set this after building the extension
+      // Get extension ID from environment
       const EXTENSION_ID = process.env.NEXT_PUBLIC_WALLET_EXTENSION_ID
+
+      if (!EXTENSION_ID) {
+        throw new Error("Extension ID not configured. Please set NEXT_PUBLIC_WALLET_EXTENSION_ID in .env")
+      }
 
       // Send message to extension to open popup with payment details
       const chromeExtension = (window as any).chrome
