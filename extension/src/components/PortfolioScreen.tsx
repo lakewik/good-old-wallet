@@ -9,6 +9,7 @@ import {
   savePendingTransactions,
   removePendingTransaction,
   getSelectedAccountIndex,
+  getAccountColor,
   type PendingTransaction,
 } from "../utils/storage";
 import { deriveWalletFromPhrase } from "../utils/accountManager";
@@ -218,6 +219,7 @@ export default function PortfolioScreen({
   const [pendingTransactions, setPendingTransactions] = useState<
     PendingTransaction[]
   >([]);
+  const [accountColor, setAccountColor] = useState<string>("#3b82f6");
   const hasLoadedRef = useRef(false);
 
   useEffect(() => {
@@ -314,6 +316,21 @@ export default function PortfolioScreen({
     try {
       setError(null);
       const accountIndex = await getSelectedAccountIndex();
+      
+      // Load account color
+      try {
+        const color = await getAccountColor(accountIndex);
+        if (color) {
+          setAccountColor(color);
+        } else {
+          // Default color if none set
+          setAccountColor("#3b82f6");
+        }
+      } catch (error) {
+        console.error("Error loading account color:", error);
+        setAccountColor("#3b82f6");
+      }
+      
       const vault = new WalletVault();
       await vault.unlockAndExecute(
         password,
@@ -424,6 +441,18 @@ export default function PortfolioScreen({
   const formatAddress = (addr: string): string => {
     if (addr.length <= 10) return addr;
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
+  };
+
+  // Helper function to convert hex color to RGB string for rgba
+  const hexToRgb = (hex: string): string => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (result) {
+      const r = parseInt(result[1], 16);
+      const g = parseInt(result[2], 16);
+      const b = parseInt(result[3], 16);
+      return `${r}, ${g}, ${b}`;
+    }
+    return "59, 130, 246"; // Default blue
   };
 
   const handleTokenSend = (token: Token) => {
@@ -576,6 +605,20 @@ export default function PortfolioScreen({
             onAccountChange={async (accountIndex, newAddress) => {
               console.log("Account changed:", accountIndex, newAddress);
               setAddress(newAddress);
+              
+              // Load account color for the new account
+              try {
+                const color = await getAccountColor(accountIndex);
+                if (color) {
+                  setAccountColor(color);
+                } else {
+                  setAccountColor("#3b82f6");
+                }
+              } catch (error) {
+                console.error("Error loading account color:", error);
+                setAccountColor("#3b82f6");
+              }
+              
               // Set loading state for balances
               setIsLoadingBalances(true);
               try {
@@ -653,9 +696,10 @@ export default function PortfolioScreen({
               width: "100%",
               textAlign: "center",
               padding: "var(--spacing-md) var(--spacing-xs)",
-              background: "rgba(255, 255, 255, 0.02)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
+              background: `rgba(${hexToRgb(accountColor)}, 0.05)`,
+              border: `1px solid rgba(${hexToRgb(accountColor)}, 0.2)`,
               borderRadius: "var(--border-radius)",
+              transition: "all var(--transition-normal)",
             }}
           >
             <div
@@ -673,12 +717,13 @@ export default function PortfolioScreen({
               style={{
                 fontSize: "24px",
                 fontWeight: 600,
-                color: "var(--text-primary)",
+                color: accountColor,
                 fontFamily: "var(--font-family-sans)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "8px",
+                transition: "color var(--transition-normal)",
               }}
             >
               {isLoadingBalances ? (

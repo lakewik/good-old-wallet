@@ -11,6 +11,7 @@ const STORAGE_KEYS = {
   SELECTED_ACCOUNT_INDEX: "selected_account_index",
   ACCOUNT_COUNT: "account_count",
   ACCOUNT_INDICES: "account_indices", // List of active account indices
+  ACCOUNT_COLORS: "account_colors", // Mapping of accountIndex -> color
 } as const;
 
 export interface StoredWalletData {
@@ -356,4 +357,80 @@ export async function deleteAccount(accountIndex: number): Promise<number[]> {
   }
   
   return updatedIndices;
+}
+
+/**
+ * Get the color for a specific account
+ */
+export async function getAccountColor(accountIndex: number): Promise<string | null> {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get([STORAGE_KEYS.ACCOUNT_COLORS], (result) => {
+      if (chrome.runtime.lastError) {
+        reject(
+          new Error(
+            `Failed to retrieve account color: ${chrome.runtime.lastError.message}`,
+          ),
+        );
+      } else {
+        const colors = result[STORAGE_KEYS.ACCOUNT_COLORS] as Record<number, string> | undefined;
+        resolve(colors?.[accountIndex] || null);
+      }
+    });
+  });
+}
+
+/**
+ * Get all account colors
+ */
+export async function getAllAccountColors(): Promise<Record<number, string>> {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get([STORAGE_KEYS.ACCOUNT_COLORS], (result) => {
+      if (chrome.runtime.lastError) {
+        reject(
+          new Error(
+            `Failed to retrieve account colors: ${chrome.runtime.lastError.message}`,
+          ),
+        );
+      } else {
+        const colors = result[STORAGE_KEYS.ACCOUNT_COLORS] as Record<number, string> | undefined;
+        resolve(colors || {});
+      }
+    });
+  });
+}
+
+/**
+ * Set the color for a specific account
+ */
+export async function setAccountColor(accountIndex: number, color: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get([STORAGE_KEYS.ACCOUNT_COLORS], (result) => {
+      if (chrome.runtime.lastError) {
+        reject(
+          new Error(
+            `Failed to retrieve account colors: ${chrome.runtime.lastError.message}`,
+          ),
+        );
+        return;
+      }
+      
+      const colors = (result[STORAGE_KEYS.ACCOUNT_COLORS] as Record<number, string> | undefined) || {};
+      const updatedColors = { ...colors, [accountIndex]: color };
+      
+      chrome.storage.local.set(
+        { [STORAGE_KEYS.ACCOUNT_COLORS]: updatedColors },
+        () => {
+          if (chrome.runtime.lastError) {
+            reject(
+              new Error(
+                `Failed to save account color: ${chrome.runtime.lastError.message}`,
+              ),
+            );
+          } else {
+            resolve();
+          }
+        },
+      );
+    });
+  });
 }

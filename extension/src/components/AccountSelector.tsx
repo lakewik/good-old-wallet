@@ -6,6 +6,8 @@ import {
   getAccountIndices,
   addAccount,
   deleteAccount,
+  getAllAccountColors,
+  setAccountColor,
 } from "../utils/storage";
 import { deriveWalletFromPhrase, getAccountLabel, formatAddress } from "../utils/accountManager";
 import { WalletVault } from "../utils/WalletVault";
@@ -25,29 +27,52 @@ export default function AccountSelector({
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [accountIndices, setAccountIndices] = useState<number[]>([0]);
   const [accountAddresses, setAccountAddresses] = useState<Record<number, string>>({});
+  const [accountColors, setAccountColors] = useState<Record<number, string>>({});
   const [isOpen, setIsOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(true);
   const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
+  const [editingColorIndex, setEditingColorIndex] = useState<number | null>(null);
 
   useEffect(() => {
     loadAccounts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Close color picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (editingColorIndex !== null) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('[data-color-picker]')) {
+          setEditingColorIndex(null);
+        }
+      }
+    };
+
+    if (editingColorIndex !== null) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [editingColorIndex]);
+
   const loadAccounts = async () => {
     try {
       setIsLoadingAddresses(true);
       console.log("Starting to load accounts...");
       
-      const [currentIndex, indices] = await Promise.all([
+      const [currentIndex, indices, colors] = await Promise.all([
         getSelectedAccountIndex(),
         getAccountIndices(),
+        getAllAccountColors(),
       ]);
       
-      console.log("Loaded account data:", { currentIndex, indices });
+      console.log("Loaded account data:", { currentIndex, indices, colors });
       setSelectedIndex(currentIndex);
       setAccountIndices(indices);
+      setAccountColors(colors);
       
       // Derive addresses for all active accounts
       if (indices.length > 0) {
@@ -265,8 +290,33 @@ export default function AccountSelector({
     }
   };
 
-  // Get current address
+  const handleColorChange = async (accountIndex: number, color: string) => {
+    try {
+      await setAccountColor(accountIndex, color);
+      setAccountColors(prev => ({ ...prev, [accountIndex]: color }));
+      setEditingColorIndex(null);
+    } catch (error) {
+      console.error("Error setting account color:", error);
+    }
+  };
+
+  // Predefined color options
+  const colorOptions = [
+    "#3b82f6", // Blue
+    "#10b981", // Green
+    "#f59e0b", // Amber
+    "#ef4444", // Red
+    "#8b5cf6", // Purple
+    "#ec4899", // Pink
+    "#06b6d4", // Cyan
+    "#84cc16", // Lime
+    "#f97316", // Orange
+    "#6366f1", // Indigo
+  ];
+
+  // Get current address and color
   const currentAddress = accountAddresses[selectedIndex];
+  const currentColor = accountColors[selectedIndex] || colorOptions[0];
 
   return (
     <div style={{ position: "relative" }}>
@@ -293,7 +343,18 @@ export default function AccountSelector({
           e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
         }}
       >
-        <span>{getAccountLabel(selectedIndex)}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", flex: 1 }}>
+          <div
+            style={{
+              width: "8px",
+              height: "8px",
+              borderRadius: "50%",
+              background: currentColor,
+              flexShrink: 0,
+            }}
+          />
+          <span>{getAccountLabel(selectedIndex)}</span>
+        </div>
         {isLoadingAddresses ? (
           <span style={{ color: "var(--text-muted)", fontStyle: "italic", fontSize: "10px" }}>
             Loading...
@@ -408,11 +469,28 @@ export default function AccountSelector({
                     >
                       <div
                         style={{
-                          fontWeight: isSelected ? 600 : 400,
-                          fontSize: "12px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
                         }}
                       >
-                        {getAccountLabel(accountIndex)}
+                        <div
+                          style={{
+                            width: "8px",
+                            height: "8px",
+                            borderRadius: "50%",
+                            background: accountColors[accountIndex] || colorOptions[0],
+                            flexShrink: 0,
+                          }}
+                        />
+                        <div
+                          style={{
+                            fontWeight: isSelected ? 600 : 400,
+                            fontSize: "12px",
+                          }}
+                        >
+                          {getAccountLabel(accountIndex)}
+                        </div>
                       </div>
                       <div
                         style={{
@@ -424,70 +502,158 @@ export default function AccountSelector({
                         {isLoadingAddresses ? "Loading..." : address ? formatAddress(address) : "..."}
                       </div>
                     </div>
-                    {accountIndices.length > 1 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                       <button
-                        onClick={(e) => handleDeleteAccount(accountIndex, e)}
-                        disabled={deletingIndex === accountIndex}
+                        data-color-picker
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingColorIndex(editingColorIndex === accountIndex ? null : accountIndex);
+                        }}
                         style={{
                           background: "transparent",
                           border: "none",
-                          cursor: deletingIndex === accountIndex ? "not-allowed" : "pointer",
+                          cursor: "pointer",
                           color: "var(--text-muted)",
                           padding: "4px",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          opacity: deletingIndex === accountIndex ? 0.5 : 1,
                           transition: "all var(--transition-fast)",
                         }}
                         onMouseEnter={(e) => {
-                          if (deletingIndex !== accountIndex) {
-                            e.currentTarget.style.color = "#ff4444";
-                            e.currentTarget.style.background = "rgba(255, 68, 68, 0.1)";
-                          }
+                          e.currentTarget.style.color = accountColors[accountIndex] || colorOptions[0];
+                          e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
                         }}
                         onMouseLeave={(e) => {
-                          if (deletingIndex !== accountIndex) {
-                            e.currentTarget.style.color = "var(--text-muted)";
-                            e.currentTarget.style.background = "transparent";
-                          }
+                          e.currentTarget.style.color = "var(--text-muted)";
+                          e.currentTarget.style.background = "transparent";
                         }}
-                        title="Delete account"
+                        title="Change color"
                       >
-                        {deletingIndex === accountIndex ? (
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            style={{
-                              animation: "spin 1s linear infinite",
-                            }}
-                          >
-                            <circle cx="12" cy="12" r="10" />
-                            <path d="M12 6v6l4 2" />
-                          </svg>
-                        ) : (
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M3 6h18" />
-                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                          </svg>
-                        )}
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                        </svg>
                       </button>
+                      {accountIndices.length > 1 && (
+                        <button
+                          onClick={(e) => handleDeleteAccount(accountIndex, e)}
+                          disabled={deletingIndex === accountIndex}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            cursor: deletingIndex === accountIndex ? "not-allowed" : "pointer",
+                            color: "var(--text-muted)",
+                            padding: "4px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            opacity: deletingIndex === accountIndex ? 0.5 : 1,
+                            transition: "all var(--transition-fast)",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (deletingIndex !== accountIndex) {
+                              e.currentTarget.style.color = "#ff4444";
+                              e.currentTarget.style.background = "rgba(255, 68, 68, 0.1)";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (deletingIndex !== accountIndex) {
+                              e.currentTarget.style.color = "var(--text-muted)";
+                              e.currentTarget.style.background = "transparent";
+                            }
+                          }}
+                          title="Delete account"
+                        >
+                          {deletingIndex === accountIndex ? (
+                            <svg
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              style={{
+                                animation: "spin 1s linear infinite",
+                              }}
+                            >
+                              <circle cx="12" cy="12" r="10" />
+                              <path d="M12 6v6l4 2" />
+                            </svg>
+                          ) : (
+                            <svg
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M3 6h18" />
+                              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                            </svg>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                    {editingColorIndex === accountIndex && (
+                      <div
+                        data-color-picker
+                        style={{
+                          position: "absolute",
+                          top: "100%",
+                          left: 0,
+                          right: 0,
+                          background: "var(--bg-primary)",
+                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          borderRadius: "var(--border-radius)",
+                          padding: "var(--spacing-sm)",
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "6px",
+                          zIndex: 1002,
+                          marginTop: "4px",
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {colorOptions.map((color) => (
+                          <button
+                            key={color}
+                            onClick={() => handleColorChange(accountIndex, color)}
+                            style={{
+                              width: "24px",
+                              height: "24px",
+                              borderRadius: "50%",
+                              background: color,
+                              border: accountColors[accountIndex] === color
+                                ? "2px solid var(--text-primary)"
+                                : "2px solid transparent",
+                              cursor: "pointer",
+                              transition: "all var(--transition-fast)",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = "scale(1.1)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = "scale(1)";
+                            }}
+                            title={color}
+                          />
+                        ))}
+                      </div>
                     )}
                   </div>
                 </button>
