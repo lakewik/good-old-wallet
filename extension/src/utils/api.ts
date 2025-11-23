@@ -66,16 +66,14 @@ export interface SingleChainPlan {
 
 export interface MultiChainPlan {
   type: "multi";
-  plan: {
-    legs: Array<{
-      chainId: number;
-      chainName: string;
-      amountUsdc: string;
-      gasCostUsdc: string;
-    }>;
-    totalAmount: string;
-    totalGasCostUsdc: string;
-  };
+  legs: Array<{
+    chainId: number;
+    chainName: string;
+    amountUsdc: string;
+    gasCostUsdc: string;
+  }>;
+  totalAmount: string;
+  totalGasCostUsdc: string;
 }
 
 export interface PlanResponse {
@@ -275,12 +273,12 @@ export function normalizeTransactionPlan(
     };
   }
 
-  // Multi-chain plan is already in the right format
+  // Multi-chain plan now has the same structure as single-chain
   return {
     type: "multi",
-    legs: plan.plan.legs,
-    totalAmount: plan.plan.totalAmount,
-    totalGasCostUsdc: plan.plan.totalGasCostUsdc,
+    legs: plan.legs,
+    totalAmount: plan.totalAmount,
+    totalGasCostUsdc: plan.totalGasCostUsdc,
   };
 }
 
@@ -307,11 +305,11 @@ export function normalizeTransactionPlanWithAmount(
     };
   }
 
-  // Multi-chain plan is already in the right format
+  // Multi-chain plan now has the same structure as single-chain
   return {
     type: "multi",
-    legs: plan.plan.legs,
-    totalAmount: plan.plan.totalAmount,
-    totalGasCostUsdc: plan.plan.totalGasCostUsdc,
+    legs: plan.legs,
+    totalAmount: plan.totalAmount,
+    totalGasCostUsdc: plan.totalGasCostUsdc,
   };
 }

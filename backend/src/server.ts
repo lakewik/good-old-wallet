@@ -5,7 +5,7 @@ import { logger } from "./setup/logger.js";
 import { handleAssetsRequest, handleVerifyRequest, handleSettleRequest, handleBalancesSummaryRequest, handlePlanSendingTransactionRequest, handleApiDocsRequest, handleSwaggerUIRequest, handleTransactionsRequest, handleLatestCIDRequest, handlePaymentRequest, handleCounterRequest, handleCounterStatusRequest, handleUserRequest } from "./routes/index.js";
 import { connectToMongoDB, closeMongoDB } from "./setup/mongodb.js";
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 7001;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 7000;
 
 // Initialize MongoDB connection
 connectToMongoDB().catch((error) => {

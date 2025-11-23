@@ -288,6 +288,8 @@ export default function ConfirmationScreen({
   password,
   encryptedVault,
 }: ConfirmationScreenProps) {
+  const [isLoading, setIsLoading] = useState(false);
+
   const formatAddress = (addr: string): string => {
     if (addr.length <= 10) return addr;
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
@@ -295,6 +297,9 @@ export default function ConfirmationScreen({
 
 
   const handleApprove = async () => {
+    if (isLoading) return; // Prevent double-clicks
+    
+    setIsLoading(true);
     try {
       // Execute the transaction plan
       // This will send actual transactions to the blockchain
@@ -356,9 +361,9 @@ export default function ConfirmationScreen({
       onApprove();
     } catch (error) {
       console.error("Error executing transaction plan:", error);
-      // TODO: Show error message to user
-      // For now, we'll still call onApprove to allow user to retry
-      onApprove();
+      setIsLoading(false);
+      // Show error message to user - for now just log it
+      // Could add error state and display it in UI
     }
   };
 
@@ -623,6 +628,7 @@ export default function ConfirmationScreen({
       >
         <button
           onClick={onCancel}
+          disabled={isLoading}
           style={{
             flex: 1,
             padding: "var(--spacing-md) var(--spacing-lg)",
@@ -631,26 +637,32 @@ export default function ConfirmationScreen({
             fontFamily: "var(--font-family-sans)",
             fontSize: "12px",
             fontWeight: 600,
-            cursor: "pointer",
+            cursor: isLoading ? "not-allowed" : "pointer",
             letterSpacing: "0.5px",
             textTransform: "uppercase",
             color: "var(--text-primary)",
             background: "rgba(255, 255, 255, 0.02)",
+            opacity: isLoading ? 0.5 : 1,
             transition: "all var(--transition-fast)",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
-            e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+            if (!isLoading) {
+              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+            }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
-            e.currentTarget.style.background = "rgba(255, 255, 255, 0.02)";
+            if (!isLoading) {
+              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.02)";
+            }
           }}
         >
           Cancel
         </button>
         <button
           onClick={handleApprove}
+          disabled={isLoading}
           style={{
             flex: 1,
             padding: "var(--spacing-md) var(--spacing-lg)",
@@ -659,23 +671,54 @@ export default function ConfirmationScreen({
             fontFamily: "var(--font-family-sans)",
             fontSize: "12px",
             fontWeight: 600,
-            cursor: "pointer",
+            cursor: isLoading ? "not-allowed" : "pointer",
             letterSpacing: "0.5px",
             textTransform: "uppercase",
             color: "var(--text-primary)",
-            background: "var(--bg-button-primary)",
+            background: isLoading ? "rgba(255, 255, 255, 0.1)" : "var(--bg-button-primary)",
+            opacity: isLoading ? 0.7 : 1,
             transition: "all var(--transition-fast)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "var(--spacing-xs)",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.35)";
-            e.currentTarget.style.background = "var(--bg-button-primary-hover)";
+            if (!isLoading) {
+              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.35)";
+              e.currentTarget.style.background = "var(--bg-button-primary-hover)";
+            }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "var(--border-focus)";
-            e.currentTarget.style.background = "var(--bg-button-primary)";
+            if (!isLoading) {
+              e.currentTarget.style.borderColor = "var(--border-focus)";
+              e.currentTarget.style.background = "var(--bg-button-primary)";
+            }
           }}
         >
-          Approve
+          {isLoading ? (
+            <>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{
+                  animation: "spin 1s linear infinite",
+                }}
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+              </svg>
+              Sending...
+            </>
+          ) : (
+            "Approve"
+          )}
         </button>
       </div>
     </div>

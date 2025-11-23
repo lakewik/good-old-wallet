@@ -1,25 +1,27 @@
 /**
  * Transaction Execution Module
- * 
+ *
  * This module handles the actual execution of transactions on the blockchain.
  * It uses the securely stored seed phrase to sign and send transactions.
- * 
+ *
  * For each transaction leg in the plan:
  * - Connects to the appropriate RPC endpoint for the chain (chainId)
  * - Creates a USDC transfer transaction to the recipient address
  * - Signs the transaction using the wallet derived from the seed phrase
  * - Sends the transaction to the network
  * - Waits for transaction receipt and extracts the txHash
- * 
+ *
  * Errors are handled gracefully - if a transaction fails, that sub-transaction
  * is marked as "failed" but processing continues with other legs.
- * 
+ *
  * Note: USDC uses 6 decimals, so amounts are in micro-USDC (smallest unit).
  */
 
 import { WalletVault, type EncryptedVault } from "./WalletVault";
 import type { NormalizedTransactionPlan } from "./api";
 import { getBlockExplorerUrl } from "./blockExplorers";
+import { getSelectedAccountIndex } from "./storage";
+import { deriveWalletFromPhrase } from "./accountManager";
 
 /**
  * Result of executing a single transaction leg
@@ -83,17 +85,17 @@ export interface ExecuteTransactionPlanParams {
 /**
  * Execute a transaction plan by sending token transfers on the specified chains.
  * Supports both USDC (ERC20) and native ETH transfers.
- * 
+ *
  * This function handles both single-chain and multi-chain transaction plans.
  * For each leg in the plan, it will:
  * 1. Connect to the appropriate blockchain network
  * 2. Create and sign a transfer transaction (USDC ERC20 or native ETH)
  * 3. Send the transaction and wait for confirmation
  * 4. Return the transaction hash
- * 
+ *
  * @param params - Execution parameters including plan, recipient, and vault credentials
  * @returns Promise resolving to the execution result with txHashes for each leg
- * 
+ *
  * @example
  * ```typescript
  * const result = await executeTransactionPlan({
@@ -102,7 +104,7 @@ export interface ExecuteTransactionPlanParams {
  *   password: userPassword,
  *   encryptedVault: vault
  * });
- * 
+ *
  * if (result.overallSuccess) {
  *   console.log("All transactions sent successfully!");
  *   result.legResults.forEach(leg => {
@@ -127,6 +129,9 @@ export async function executeTransactionPlan(
 
   const legResults: TransactionLegResult[] = [];
 
+  // Get selected account index
+  const accountIndex = await getSelectedAccountIndex();
+
   // Unlock the vault and execute transactions
   const vault = new WalletVault();
   await vault.unlockAndExecute(
@@ -138,13 +143,15 @@ export async function executeTransactionPlan(
 
       // Dynamically import ethers
       const { ethers } = await import("ethers");
-      const wallet = ethers.Wallet.fromPhrase(seedPhrase);
+      
+      // Derive wallet using account index
+      const { wallet } = await deriveWalletFromPhrase(seedPhrase, accountIndex);
 
       // Process each leg sequentially
       for (const leg of plan.legs) {
         try {
           console.log(`Processing transaction leg: ${leg.chainName} (chainId: ${leg.chainId})`);
-          
+
           // Get RPC provider for this chain
           const rpcUrl = getRpcUrlForChain(leg.chainId);
           console.log(`Connecting to RPC: ${rpcUrl}`);
@@ -153,13 +160,13 @@ export async function executeTransactionPlan(
           // Connect wallet to provider
           const signer = wallet.connect(provider);
 
-          let tx: ethers.ContractTransactionResponse;
+          let tx: any; // ethers.ContractTransactionResponse type
 
           if (isNativeEth) {
             // Native ETH transfer
             const amount = BigInt(leg.amountUsdc); // amountUsdc field contains wei for ETH
             console.log(`Sending ${amount} wei (${Number(amount) / 1e18} ETH) to ${recipientAddress}`);
-            
+
             // Send native ETH
             tx = await signer.sendTransaction({
               to: recipientAddress,
@@ -191,11 +198,8 @@ export async function executeTransactionPlan(
           const txHash = tx.hash;
           console.log(`Transaction sent! Hash: ${txHash}`);
 
-          // Wait for transaction confirmation (wait for at least 1 confirmation)
-          console.log(`Waiting for confirmation...`);
-          await tx.wait();
-          console.log(`Transaction confirmed!`);
-
+          // Return immediately with hash - don't wait for confirmation
+          // Confirmation will be checked later by the pending transaction system
           legResults.push({
             chainId: leg.chainId,
             chainName: leg.chainName,
@@ -207,7 +211,7 @@ export async function executeTransactionPlan(
           // Handle errors gracefully - mark this leg as failed but continue with others
           const errorMessage = error instanceof Error ? error.message : "Unknown error";
           const errorDetails = error instanceof Error ? error.stack : String(error);
-          
+
           console.error(`Transaction failed on ${leg.chainName} (chainId: ${leg.chainId}):`, {
             error: errorMessage,
             details: errorDetails,
@@ -215,7 +219,7 @@ export async function executeTransactionPlan(
             recipientAddress,
             tokenSymbol,
           });
-          
+
           legResults.push({
             chainId: leg.chainId,
             chainName: leg.chainName,
@@ -249,7 +253,8 @@ export function getRpcUrlForChain(chainId: number): string {
     8453: "https://mainnet.base.org", // Base
     42161: "https://arb1.arbitrum.io/rpc", // Arbitrum
     137: "https://polygon-rpc.com", // Polygon
-    11155111: "https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161", // Ethereum Sepolia
+    11155111: "https://eth-sepolia.api.onfinality.io/public", // Ethereum Sepolia
+    11155420: "https://sepolia.optimism.io", // Optimism Sepolia
     // Add more chains as needed
   };
 
@@ -272,6 +277,7 @@ export function getUsdcAddressForChain(chainId: number): string {
     42161: "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8", // Arbitrum
     137: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174", // Polygon
     11155111: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", // Ethereum Sepolia (testnet USDC)
+    11155420: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7", // Optimism Sepolia (testnet USDC)
     // Add more chains as needed
   };
 
@@ -298,4 +304,3 @@ export const ERC20_TRANSFER_ABI = [
     type: "function",
   },
 ] as const;
-

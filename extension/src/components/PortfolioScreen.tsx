@@ -7,11 +7,17 @@ import {
   getEncryptedVault,
   getPendingTransactions,
   savePendingTransactions,
+  removePendingTransaction,
+  getSelectedAccountIndex,
+  getAccountColor,
   type PendingTransaction,
 } from "../utils/storage";
+import { deriveWalletFromPhrase } from "../utils/accountManager";
+import AccountSelector from "./AccountSelector";
 import type { EncryptedVault } from "../utils/WalletVault";
 import SendScreen from "./SendScreen";
 import PendingTransactionCard from "./PendingTransactionCard";
+import FilecoinBackupButton from "./FilecoinBackupButton";
 import {
   getBalancesSummary,
   ApiError,
@@ -207,12 +213,14 @@ export default function PortfolioScreen({
     useState<string>("$0.00");
   const [tokens, setTokens] = useState<Token[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingBalances, setIsLoadingBalances] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
   const [pendingTransactions, setPendingTransactions] = useState<
     PendingTransaction[]
   >([]);
+  const [accountColor, setAccountColor] = useState<string>("#3b82f6");
   const hasLoadedRef = useRef(false);
 
   useEffect(() => {
@@ -250,21 +258,43 @@ export default function PortfolioScreen({
             return; // Already processing
           }
           
-          // Mock transaction execution - succeed after 10 seconds
-          // Note: txHash should already exist since transaction was sent, we just update status
+          // Update transaction status after 10 seconds
+          // Note: Only update sub-transactions that are still pending, keep failed ones as failed
           (window as any)[timeoutKey] = setTimeout(async () => {
             const updated = await getPendingTransactions();
             const txIndex = updated.findIndex((t) => t.id === tx.id);
             if (txIndex !== -1 && updated[txIndex].status === "pending") {
               const updatedTx = { ...updated[txIndex] };
-              updatedTx.status = "success";
+              
+              // Update sub-transactions: only mark pending ones as success, keep failed ones as failed
               updatedTx.subTransactions = updatedTx.subTransactions.map(
-                (subTx) => ({
-                  ...subTx,
-                  status: "success" as const,
-                  // Keep existing txHash and blockExplorerUrl
-                }),
+                (subTx) => {
+                  if (subTx.status === "pending") {
+                    return {
+                      ...subTx,
+                      status: "success" as const,
+                      // Keep existing txHash and blockExplorerUrl
+                    };
+                  }
+                  // Keep failed sub-transactions as failed
+                  return subTx;
+                },
               );
+              
+              // Update overall status based on sub-transaction statuses
+              const allSuccess = updatedTx.subTransactions.every(
+                (subTx) => subTx.status === "success",
+              );
+              const anyFailed = updatedTx.subTransactions.some(
+                (subTx) => subTx.status === "failed",
+              );
+              
+              updatedTx.status = anyFailed
+                ? "failed"
+                : allSuccess
+                  ? "success"
+                  : "pending";
+              
               updated[txIndex] = updatedTx;
               await savePendingTransactions(updated);
               // Filter again in case transaction is now > 24h old
@@ -294,9 +324,36 @@ export default function PortfolioScreen({
     }
   };
 
+  const handleTransactionDelete = async (transactionId: string) => {
+    try {
+      await removePendingTransaction(transactionId);
+      // Reload transactions to update UI
+      const updated = await getPendingTransactions();
+      setPendingTransactions(updated);
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+    }
+  };
+
   const loadWalletData = async () => {
     try {
       setError(null);
+      const accountIndex = await getSelectedAccountIndex();
+      
+      // Load account color
+      try {
+        const color = await getAccountColor(accountIndex);
+        if (color) {
+          setAccountColor(color);
+        } else {
+          // Default color if none set
+          setAccountColor("#3b82f6");
+        }
+      } catch (error) {
+        console.error("Error loading account color:", error);
+        setAccountColor("#3b82f6");
+      }
+      
       const vault = new WalletVault();
       await vault.unlockAndExecute(
         password,
@@ -305,10 +362,8 @@ export default function PortfolioScreen({
           const decoder = new TextDecoder();
           const seedPhrase = decoder.decode(seedPhraseBytes);
 
-          // Derive wallet address
-          const { ethers } = await import("ethers");
-          const wallet = ethers.Wallet.fromPhrase(seedPhrase);
-          const walletAddress = wallet.address;
+          // Derive wallet address using account index
+          const { address: walletAddress } = await deriveWalletFromPhrase(seedPhrase, accountIndex);
           setAddress(walletAddress);
 
           // Fetch portfolio data from API
@@ -409,6 +464,18 @@ export default function PortfolioScreen({
   const formatAddress = (addr: string): string => {
     if (addr.length <= 10) return addr;
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
+  };
+
+  // Helper function to convert hex color to RGB string for rgba
+  const hexToRgb = (hex: string): string => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (result) {
+      const r = parseInt(result[1], 16);
+      const g = parseInt(result[2], 16);
+      const b = parseInt(result[3], 16);
+      return `${r}, ${g}, ${b}`;
+    }
+    return "59, 130, 246"; // Default blue
   };
 
   const handleTokenSend = (token: Token) => {
@@ -552,17 +619,41 @@ export default function PortfolioScreen({
             alignItems: "center",
             gap: "var(--spacing-sm)",
             flex: 1,
+            justifyContent: "flex-end",
           }}
         >
-          <span
-            style={{
-              fontFamily: "var(--font-family-mono)",
-              fontSize: "12px",
-              color: "var(--text-primary)",
+          <AccountSelector
+            password={password}
+            encryptedVault={encryptedVault}
+            onAccountChange={async (accountIndex, newAddress) => {
+              console.log("Account changed:", accountIndex, newAddress);
+              setAddress(newAddress);
+              
+              // Load account color for the new account
+              try {
+                const color = await getAccountColor(accountIndex);
+                if (color) {
+                  setAccountColor(color);
+                } else {
+                  setAccountColor("#3b82f6");
+                }
+              } catch (error) {
+                console.error("Error loading account color:", error);
+                setAccountColor("#3b82f6");
+              }
+              
+              // Set loading state for balances
+              setIsLoadingBalances(true);
+              try {
+                // Reload wallet data for the new account
+                await loadWalletData();
+              } catch (error) {
+                console.error("Error loading wallet data after account change:", error);
+              } finally {
+                setIsLoadingBalances(false);
+              }
             }}
-          >
-            {formatAddress(address)}
-          </span>
+          />
           <button
             onClick={copyAddress}
             style={{
@@ -628,9 +719,10 @@ export default function PortfolioScreen({
               width: "100%",
               textAlign: "center",
               padding: "var(--spacing-md) var(--spacing-xs)",
-              background: "rgba(255, 255, 255, 0.02)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
+              background: `rgba(${hexToRgb(accountColor)}, 0.05)`,
+              border: `1px solid rgba(${hexToRgb(accountColor)}, 0.2)`,
               borderRadius: "var(--border-radius)",
+              transition: "all var(--transition-normal)",
             }}
           >
             <div
@@ -648,11 +740,53 @@ export default function PortfolioScreen({
               style={{
                 fontSize: "24px",
                 fontWeight: 600,
-                color: "var(--text-primary)",
+                color: accountColor,
                 fontFamily: "var(--font-family-sans)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                transition: "color var(--transition-normal)",
               }}
             >
-              {totalPortfolioValue}
+              {isLoadingBalances ? (
+                <>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    style={{
+                      animation: "spin 1s linear infinite",
+                    }}
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeDasharray="32"
+                      strokeDashoffset="32"
+                      opacity="0.3"
+                    />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeDasharray="32"
+                      strokeDashoffset="24"
+                    />
+                  </svg>
+                  <span style={{ fontSize: "14px", opacity: 0.7 }}>Loading...</span>
+                </>
+              ) : (
+                totalPortfolioValue
+              )}
             </div>
           </div>
 
@@ -682,6 +816,7 @@ export default function PortfolioScreen({
                   key={tx.id}
                   transaction={tx}
                   onUpdate={handleTransactionUpdate}
+                  onDelete={handleTransactionDelete}
                 />
               ))}
             </div>
@@ -708,7 +843,53 @@ export default function PortfolioScreen({
             >
               Tokens
             </div>
-            {tokens.length === 0 ? (
+            {isLoadingBalances ? (
+              <div
+                style={{
+                  padding: "var(--spacing-lg)",
+                  textAlign: "center",
+                  color: "var(--text-muted)",
+                  fontSize: "11px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                }}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  style={{
+                    animation: "spin 1s linear infinite",
+                  }}
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeDasharray="32"
+                    strokeDashoffset="32"
+                    opacity="0.3"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeDasharray="32"
+                    strokeDashoffset="24"
+                  />
+                </svg>
+                <span>Loading balances...</span>
+              </div>
+            ) : tokens.length === 0 ? (
               <div
                 style={{
                   padding: "var(--spacing-lg)",
@@ -731,6 +912,7 @@ export default function PortfolioScreen({
           </div>
         </div>
       </div>
+      <FilecoinBackupButton password={password} encryptedVault={encryptedVault} />
     </div>
   );
 }

@@ -13,10 +13,17 @@
     "type": "module"
   },
   "content_scripts": [],
-  "web_accessible_resources": [],
+  "web_accessible_resources": [
+    {
+      "resources": ["corgi.png", "corgi-running.gif", "filecoin.png"],
+      "matches": ["<all_urls>"]
+    }
+  ],
   "permissions": ["storage"],
   "host_permissions": [
-    "https://guppy-saving-mistakenly.ngrok-free.app/*"
+    "https://guppy-saving-mistakenly.ngrok-free.app/*",
+    "http://localhost:*/*",
+    "https://calib2.ezpdpz.net/*"
   ],
   "externally_connectable": {
     "matches": [
