@@ -48,7 +48,7 @@ interface SummarizedAmountsResponse {
       const chain = CHAINS[chainId];
   
       // Get native balance
-      const nativeBalance = getNativeBalance(chainId, address);
+      const nativeBalance = await getNativeBalance(chainId, address);
       const nativeFormatted = formatBalance(nativeBalance, chain.native.decimals);
       totalNativeWei += nativeBalance;
       nativeSymbol = chain.native.symbol;
@@ -58,7 +58,7 @@ interface SummarizedAmountsResponse {
       let usdcFormatted = "0";
       const usdcToken = chain.commonTokens.USDC;
       if (usdcToken) {
-        usdcBalance = getErc20Balance(chainId, usdcToken, address);
+        usdcBalance = await getErc20Balance(chainId, usdcToken, address);
         usdcFormatted = formatBalance(usdcBalance, usdcToken.decimals);
         totalUsdcSmallestUnit += usdcBalance;
       }
