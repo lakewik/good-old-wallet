@@ -258,21 +258,43 @@ export default function PortfolioScreen({
             return; // Already processing
           }
           
-          // Mock transaction execution - succeed after 10 seconds
-          // Note: txHash should already exist since transaction was sent, we just update status
+          // Update transaction status after 10 seconds
+          // Note: Only update sub-transactions that are still pending, keep failed ones as failed
           (window as any)[timeoutKey] = setTimeout(async () => {
             const updated = await getPendingTransactions();
             const txIndex = updated.findIndex((t) => t.id === tx.id);
             if (txIndex !== -1 && updated[txIndex].status === "pending") {
               const updatedTx = { ...updated[txIndex] };
-              updatedTx.status = "success";
+              
+              // Update sub-transactions: only mark pending ones as success, keep failed ones as failed
               updatedTx.subTransactions = updatedTx.subTransactions.map(
-                (subTx) => ({
-                  ...subTx,
-                  status: "success" as const,
-                  // Keep existing txHash and blockExplorerUrl
-                }),
+                (subTx) => {
+                  if (subTx.status === "pending") {
+                    return {
+                      ...subTx,
+                      status: "success" as const,
+                      // Keep existing txHash and blockExplorerUrl
+                    };
+                  }
+                  // Keep failed sub-transactions as failed
+                  return subTx;
+                },
               );
+              
+              // Update overall status based on sub-transaction statuses
+              const allSuccess = updatedTx.subTransactions.every(
+                (subTx) => subTx.status === "success",
+              );
+              const anyFailed = updatedTx.subTransactions.some(
+                (subTx) => subTx.status === "failed",
+              );
+              
+              updatedTx.status = anyFailed
+                ? "failed"
+                : allSuccess
+                  ? "success"
+                  : "pending";
+              
               updated[txIndex] = updatedTx;
               await savePendingTransactions(updated);
               // Filter again in case transaction is now > 24h old

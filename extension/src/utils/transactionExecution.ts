@@ -254,6 +254,7 @@ export function getRpcUrlForChain(chainId: number): string {
     42161: "https://arb1.arbitrum.io/rpc", // Arbitrum
     137: "https://polygon-rpc.com", // Polygon
     11155111: "https://eth-sepolia.api.onfinality.io/public", // Ethereum Sepolia
+    11155420: "https://sepolia.optimism.io", // Optimism Sepolia
     // Add more chains as needed
   };
 
@@ -276,6 +277,7 @@ export function getUsdcAddressForChain(chainId: number): string {
     42161: "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8", // Arbitrum
     137: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174", // Polygon
     11155111: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", // Ethereum Sepolia (testnet USDC)
+    11155420: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7", // Optimism Sepolia (testnet USDC)
     // Add more chains as needed
   };
 
