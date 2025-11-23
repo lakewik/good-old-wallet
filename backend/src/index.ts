@@ -11,5 +11,5 @@ export * from "./handlers/get-balances.js";
 export * from "./handlers/estimate-gas.js";
 export * from "./services/orchestrator.js";
 export * from "./services/x402.js";
-export * from "./services/eil-builder.js";
 export * from "./setup/logger.js";
+// export * from "./services/eil-builder.js";

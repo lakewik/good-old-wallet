@@ -183,6 +183,7 @@ export async function getBalancesSummary(
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "true",
       },
     });
 
@@ -207,6 +208,7 @@ export async function getAssets(address: string): Promise<AssetsResponse> {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "true",
       },
     });
 
@@ -233,6 +235,7 @@ export async function planSendingTransaction(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "true",
       },
       body: JSON.stringify(request),
     });

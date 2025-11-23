@@ -15,4 +15,4 @@ export const BUTTON_LABELS = {
 } as const;
 
 // API Configuration
-export const API_BASE_URL = "https://595b85c58418.ngrok-free.app";
+export const API_BASE_URL = "https://5c986db4ea00.ngrok-free.app";
