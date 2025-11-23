@@ -7,8 +7,12 @@ import {
   getEncryptedVault,
   getPendingTransactions,
   savePendingTransactions,
+  removePendingTransaction,
+  getSelectedAccountIndex,
   type PendingTransaction,
 } from "../utils/storage";
+import { deriveWalletFromPhrase } from "../utils/accountManager";
+import AccountSelector from "./AccountSelector";
 import type { EncryptedVault } from "../utils/WalletVault";
 import SendScreen from "./SendScreen";
 import PendingTransactionCard from "./PendingTransactionCard";
@@ -207,6 +211,7 @@ export default function PortfolioScreen({
     useState<string>("$0.00");
   const [tokens, setTokens] = useState<Token[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingBalances, setIsLoadingBalances] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
@@ -294,9 +299,21 @@ export default function PortfolioScreen({
     }
   };
 
+  const handleTransactionDelete = async (transactionId: string) => {
+    try {
+      await removePendingTransaction(transactionId);
+      // Reload transactions to update UI
+      const updated = await getPendingTransactions();
+      setPendingTransactions(updated);
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+    }
+  };
+
   const loadWalletData = async () => {
     try {
       setError(null);
+      const accountIndex = await getSelectedAccountIndex();
       const vault = new WalletVault();
       await vault.unlockAndExecute(
         password,
@@ -305,10 +322,8 @@ export default function PortfolioScreen({
           const decoder = new TextDecoder();
           const seedPhrase = decoder.decode(seedPhraseBytes);
 
-          // Derive wallet address
-          const { ethers } = await import("ethers");
-          const wallet = ethers.Wallet.fromPhrase(seedPhrase);
-          const walletAddress = wallet.address;
+          // Derive wallet address using account index
+          const { address: walletAddress } = await deriveWalletFromPhrase(seedPhrase, accountIndex);
           setAddress(walletAddress);
 
           // Fetch portfolio data from API
@@ -552,17 +567,27 @@ export default function PortfolioScreen({
             alignItems: "center",
             gap: "var(--spacing-sm)",
             flex: 1,
+            justifyContent: "flex-end",
           }}
         >
-          <span
-            style={{
-              fontFamily: "var(--font-family-mono)",
-              fontSize: "12px",
-              color: "var(--text-primary)",
+          <AccountSelector
+            password={password}
+            encryptedVault={encryptedVault}
+            onAccountChange={async (accountIndex, newAddress) => {
+              console.log("Account changed:", accountIndex, newAddress);
+              setAddress(newAddress);
+              // Set loading state for balances
+              setIsLoadingBalances(true);
+              try {
+                // Reload wallet data for the new account
+                await loadWalletData();
+              } catch (error) {
+                console.error("Error loading wallet data after account change:", error);
+              } finally {
+                setIsLoadingBalances(false);
+              }
             }}
-          >
-            {formatAddress(address)}
-          </span>
+          />
           <button
             onClick={copyAddress}
             style={{
@@ -650,9 +675,50 @@ export default function PortfolioScreen({
                 fontWeight: 600,
                 color: "var(--text-primary)",
                 fontFamily: "var(--font-family-sans)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
               }}
             >
-              {totalPortfolioValue}
+              {isLoadingBalances ? (
+                <>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    style={{
+                      animation: "spin 1s linear infinite",
+                    }}
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeDasharray="32"
+                      strokeDashoffset="32"
+                      opacity="0.3"
+                    />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeDasharray="32"
+                      strokeDashoffset="24"
+                    />
+                  </svg>
+                  <span style={{ fontSize: "14px", opacity: 0.7 }}>Loading...</span>
+                </>
+              ) : (
+                totalPortfolioValue
+              )}
             </div>
           </div>
 
@@ -682,6 +748,7 @@ export default function PortfolioScreen({
                   key={tx.id}
                   transaction={tx}
                   onUpdate={handleTransactionUpdate}
+                  onDelete={handleTransactionDelete}
                 />
               ))}
             </div>
@@ -708,7 +775,53 @@ export default function PortfolioScreen({
             >
               Tokens
             </div>
-            {tokens.length === 0 ? (
+            {isLoadingBalances ? (
+              <div
+                style={{
+                  padding: "var(--spacing-lg)",
+                  textAlign: "center",
+                  color: "var(--text-muted)",
+                  fontSize: "11px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                }}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  style={{
+                    animation: "spin 1s linear infinite",
+                  }}
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeDasharray="32"
+                    strokeDashoffset="32"
+                    opacity="0.3"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeDasharray="32"
+                    strokeDashoffset="24"
+                  />
+                </svg>
+                <span>Loading balances...</span>
+              </div>
+            ) : tokens.length === 0 ? (
               <div
                 style={{
                   padding: "var(--spacing-lg)",

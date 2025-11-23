@@ -10,8 +10,9 @@ import {
   ApiError,
   type PlanRequest,
 } from "../utils/api";
-import { getEncryptedVault } from "../utils/storage";
+import { getEncryptedVault, getSelectedAccountIndex } from "../utils/storage";
 import { WalletVault } from "../utils/WalletVault";
+import { deriveWalletFromPhrase } from "../utils/accountManager";
 
 interface Token {
   image: string;
@@ -81,7 +82,8 @@ export default function SendScreen({
     setError(null);
 
     try {
-      // Get wallet address from vault
+      // Get wallet address from vault using selected account
+      const accountIndex = await getSelectedAccountIndex();
       const vault = new WalletVault();
       let sourceAddress = "";
       
@@ -91,9 +93,8 @@ export default function SendScreen({
         async (seedPhraseBytes) => {
           const decoder = new TextDecoder();
           const seedPhrase = decoder.decode(seedPhraseBytes);
-          const { ethers } = await import("ethers");
-          const wallet = ethers.Wallet.fromPhrase(seedPhrase);
-          sourceAddress = wallet.address;
+          const { address } = await deriveWalletFromPhrase(seedPhrase, accountIndex);
+          sourceAddress = address;
         },
       );
 

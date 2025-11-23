@@ -9,6 +9,7 @@ import { getBlockExplorerUrl } from "../utils/blockExplorers";
 interface PendingTransactionCardProps {
   transaction: PendingTransaction;
   onUpdate: (updated: PendingTransaction) => void;
+  onDelete?: (transactionId: string) => void;
 }
 
 function getStatusIcon(status: TransactionStatus) {
@@ -168,8 +169,16 @@ function SubTransactionRow({
 export default function PendingTransactionCard({
   transaction,
   onUpdate,
+  onDelete,
 }: PendingTransactionCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent expanding/collapsing when clicking delete
+    if (onDelete && window.confirm("Are you sure you want to remove this transaction from history?")) {
+      onDelete(transaction.id);
+    }
+  };
 
   const formatAddress = (addr: string): string => {
     if (addr.length <= 10) return addr;
@@ -261,24 +270,73 @@ export default function PendingTransactionCard({
               : "Single-Chain Transaction"}
           </div>
         </div>
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+        <div
           style={{
-            color: "var(--text-muted)",
-            transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
-            transition: "transform var(--transition-fast)",
-            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--spacing-xs)",
           }}
         >
-          <path d="M6 9l6 6 6-6" />
-        </svg>
+          {onDelete && (
+            <button
+              onClick={handleDelete}
+              style={{
+                background: "transparent",
+                border: "none",
+                padding: "var(--spacing-xs)",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "4px",
+                transition: "all var(--transition-fast)",
+                color: "var(--text-muted)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(255, 68, 68, 0.1)";
+                e.currentTarget.style.color = "#ff4444";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = "var(--text-muted)";
+              }}
+              title="Remove transaction from history"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 6h18" />
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              </svg>
+            </button>
+          )}
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{
+              color: "var(--text-muted)",
+              transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+              transition: "transform var(--transition-fast)",
+              flexShrink: 0,
+            }}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </div>
       </button>
 
       {/* Expanded View */}

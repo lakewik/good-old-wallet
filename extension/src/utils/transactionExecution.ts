@@ -20,6 +20,8 @@
 import { WalletVault, type EncryptedVault } from "./WalletVault";
 import type { NormalizedTransactionPlan } from "./api";
 import { getBlockExplorerUrl } from "./blockExplorers";
+import { getSelectedAccountIndex } from "./storage";
+import { deriveWalletFromPhrase } from "./accountManager";
 
 /**
  * Result of executing a single transaction leg
@@ -127,6 +129,9 @@ export async function executeTransactionPlan(
 
   const legResults: TransactionLegResult[] = [];
 
+  // Get selected account index
+  const accountIndex = await getSelectedAccountIndex();
+
   // Unlock the vault and execute transactions
   const vault = new WalletVault();
   await vault.unlockAndExecute(
@@ -138,7 +143,9 @@ export async function executeTransactionPlan(
 
       // Dynamically import ethers
       const { ethers } = await import("ethers");
-      const wallet = ethers.Wallet.fromPhrase(seedPhrase);
+      
+      // Derive wallet using account index
+      const { wallet } = await deriveWalletFromPhrase(seedPhrase, accountIndex);
 
       // Process each leg sequentially
       for (const leg of plan.legs) {
@@ -153,7 +160,7 @@ export async function executeTransactionPlan(
           // Connect wallet to provider
           const signer = wallet.connect(provider);
 
-          let tx: ethers.ContractTransactionResponse;
+          let tx: any; // ethers.ContractTransactionResponse type
 
           if (isNativeEth) {
             // Native ETH transfer
