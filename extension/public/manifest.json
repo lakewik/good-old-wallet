@@ -17,6 +17,8 @@
   ],
   "permissions": ["storage"],
   "host_permissions": [
-    "https://guppy-saving-mistakenly.ngrok-free.app/*"
+    "https://guppy-saving-mistakenly.ngrok-free.app/*",
+    "http://localhost:7001/*",
+    "https://calib2.ezpdpz.net/*"
   ]
 }

@@ -87,6 +87,167 @@ async function encryptAccountData(data: AccountData, privateKey: string): Promis
 }
 
 /**
+ * Decrypt account data using AES-GCM with a key derived from the private key
+ */
+async function decryptAccountData(encryptedData: Uint8Array, privateKey: string): Promise<AccountData> {
+  // Extract tag, salt, iv, and encrypted data
+  // Structure: [TAG (25 bytes)][SALT (16 bytes)][IV (12 bytes)][ENCRYPTED (variable)][PADDING (zeros)]
+  const WALLET_TAG = "GOOD_OLD_WALLET_BACKUP_V1";
+  const tagLength = WALLET_TAG.length;
+  const saltLength = 16;
+  const ivLength = 12;
+  
+  // Check if the data starts with the wallet tag
+  const tagBytes = encryptedData.slice(0, tagLength);
+  const tag = new TextDecoder().decode(tagBytes);
+  
+  if (tag !== WALLET_TAG) {
+    throw new Error("Invalid backup data: missing wallet identifier tag");
+  }
+  
+  // Structure is: TAG | SALT | IV | ENCRYPTED | PADDING
+  // So salt starts right after tag
+  const saltStart = tagLength;
+  const ivStart = saltStart + saltLength;
+  const encryptedStart = ivStart + ivLength;
+  
+  if (encryptedStart > encryptedData.length) {
+    throw new Error("Invalid backup data: insufficient data length");
+  }
+  
+  // Extract salt and IV
+  const salt = encryptedData.slice(saltStart, ivStart);
+  const iv = encryptedData.slice(ivStart, encryptedStart);
+  
+  // Find where encrypted content ends (before padding zeros at the end)
+  // AES-GCM encrypted data includes a 16-byte authentication tag
+  // We need to find the exact encrypted length by trying to decrypt
+  let encryptedEnd = encryptedData.length;
+  
+  // Remove trailing zeros (padding)
+  while (encryptedEnd > encryptedStart && encryptedData[encryptedEnd - 1] === 0) {
+    encryptedEnd--;
+  }
+  
+  if (encryptedEnd <= encryptedStart) {
+    throw new Error("Invalid backup data: no encrypted content found");
+  }
+  
+  // Try to find the correct encrypted length by attempting decryption
+  // Start from the end and work backwards if decryption fails
+  let encrypted = encryptedData.slice(encryptedStart, encryptedEnd);
+  let lastError: Error | null = null;
+  
+  // Derive decryption key once
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(privateKey),
+    { name: "PBKDF2" },
+    false,
+    ["deriveKey"]
+  );
+
+  const decryptionKey = await crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: salt,
+      iterations: 100000,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["decrypt"]
+  );
+
+  // Try decrypting - if it fails, the encrypted data might include some padding
+  // AES-GCM will throw if the data is corrupted or includes extra bytes
+  let decryptedBuffer: ArrayBuffer;
+  try {
+    decryptedBuffer = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: iv },
+      decryptionKey,
+      encrypted
+    );
+  } catch (error) {
+    // If decryption fails, try removing more bytes from the end
+    // This handles cases where some padding zeros might have been included
+    throw new Error(`Failed to decrypt backup data: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+
+  // Parse JSON
+  const dataJson = new TextDecoder().decode(decryptedBuffer);
+  const accountData = JSON.parse(dataJson) as AccountData;
+  
+  // Validate wallet identifier
+  if (accountData.walletIdentifier !== "good-old-wallet-backup") {
+    throw new Error("Invalid backup data: wallet identifier mismatch");
+  }
+  
+  return accountData;
+}
+
+/**
+ * Restore account data from Filecoin backup
+ */
+export async function restoreFromFilecoin(
+  seedPhrase: string,
+  onProgress?: (message: string) => void
+): Promise<AccountData | null> {
+  try {
+    // Derive account 0 address
+    onProgress?.("Attempting to search for Filecoin backup...");
+    const { address: account0Address } = await deriveWalletFromPhrase(seedPhrase, 0);
+    
+    // Get latest CID from backend
+    onProgress?.("Retrieving Filecoin backup...");
+    const response = await fetch(`http://localhost:7001/latest-cid/${account0Address}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    
+    if (!response.ok) {
+      console.log("No backup found for this wallet");
+      return null;
+    }
+    
+    const cidData = await response.json();
+    
+    if (!cidData.success || !cidData.url) {
+      console.log("No backup URL found");
+      return null;
+    }
+    
+    // Download encrypted data from Filecoin
+    onProgress?.("Retrieving Filecoin backup...");
+    const downloadResponse = await fetch(cidData.url);
+    if (!downloadResponse.ok) {
+      throw new Error(`Failed to download backup: ${downloadResponse.statusText}`);
+    }
+    
+    const encryptedArrayBuffer = await downloadResponse.arrayBuffer();
+    const encryptedData = new Uint8Array(encryptedArrayBuffer);
+    
+    // Get private key from account 0
+    const { wallet } = await deriveWalletFromPhrase(seedPhrase, 0);
+    const account0PrivateKey = wallet.privateKey;
+    
+    // Decrypt the account data
+    onProgress?.("Decrypting Filecoin backup...");
+    const accountData = await decryptAccountData(encryptedData, account0PrivateKey);
+    
+    console.log("✅ Successfully restored account data from Filecoin backup");
+    return accountData;
+  } catch (error) {
+    console.error("Error restoring from Filecoin backup:", error);
+    // Don't throw - if restore fails, just continue without backup data
+    return null;
+  }
+}
+
+/**
  * Backup account data to Filecoin
  */
 export async function backupToFilecoin(

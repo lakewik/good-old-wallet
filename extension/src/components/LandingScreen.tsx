@@ -20,7 +20,13 @@ import {
   BUTTON_LABELS,
 } from "../constants";
 import { WalletVault, type EncryptedVault } from "../utils/WalletVault";
-import { saveEncryptedVault } from "../utils/storage";
+import { 
+  saveEncryptedVault,
+  setAccountIndices,
+  setAccountColor,
+  setAccountName,
+} from "../utils/storage";
+import { restoreFromFilecoin } from "../utils/filecoinBackup";
 import SuccessScreen from "./SuccessScreen";
 
 export default function LandingScreen() {
@@ -32,6 +38,7 @@ export default function LandingScreen() {
     null,
   );
   const [savedPassword, setSavedPassword] = useState<string>("");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const handleImportSeedPhrase = async () => {
     // Reset states
@@ -49,13 +56,51 @@ export default function LandingScreen() {
     }
 
     setIsLoading(true);
+    setStatusMessage(null);
 
     try {
       const vault = new WalletVault();
+      setStatusMessage("Encrypting wallet...");
       const encryptedVault = await vault.encryptWallet(password, seedPhrase);
 
       // Save to chrome.storage.local
       await saveEncryptedVault(encryptedVault);
+
+      // Try to restore account data from Filecoin backup
+      try {
+        console.log("Attempting to restore account data from Filecoin backup...");
+        const backupData = await restoreFromFilecoin(seedPhrase, (message) => {
+          setStatusMessage(message);
+        });
+        
+        if (backupData) {
+          console.log("Restoring account data:", backupData);
+          setStatusMessage("Restoring account data...");
+          
+          // Restore account indices
+          await setAccountIndices(backupData.indices);
+          
+          // Restore account colors
+          for (const [accountIndex, color] of Object.entries(backupData.colors)) {
+            await setAccountColor(Number(accountIndex), color);
+          }
+          
+          // Restore account names
+          for (const [accountIndex, name] of Object.entries(backupData.names)) {
+            await setAccountName(Number(accountIndex), name);
+          }
+          
+          setStatusMessage("✅ Account data restored from Filecoin backup");
+          console.log("✅ Account data restored from Filecoin backup");
+        } else {
+          console.log("No backup found, starting with default account");
+          setStatusMessage(null);
+        }
+      } catch (restoreError) {
+        console.error("Error restoring from backup (continuing anyway):", restoreError);
+        setStatusMessage(null);
+        // Continue even if restore fails - user can still use the wallet
+      }
 
       // Store encrypted vault and password for success screen
       setEncryptedVault(encryptedVault);
@@ -129,13 +174,29 @@ export default function LandingScreen() {
           </div>
         )}
 
+        {statusMessage && (
+          <div
+            className="status-message"
+            style={{ 
+              color: statusMessage.startsWith("✅") ? "#22c55e" : "#3b82f6", 
+              marginTop: "8px", 
+              fontSize: "14px",
+              textAlign: "center"
+            }}
+          >
+            {statusMessage}
+          </div>
+        )}
+
         <ButtonGroup>
           <Button
             variant="primary"
             onClick={handleImportSeedPhrase}
             disabled={isLoading}
           >
-            {isLoading ? "Encrypting..." : BUTTON_LABELS.IMPORT_SEED_PHRASE}
+            {isLoading 
+              ? (statusMessage || "Processing...") 
+              : BUTTON_LABELS.IMPORT_SEED_PHRASE}
           </Button>
           <Button
             variant="text"
