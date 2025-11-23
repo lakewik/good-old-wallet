@@ -1,19 +1,19 @@
 /**
  * Transaction Execution Module
- * 
+ *
  * This module handles the actual execution of transactions on the blockchain.
  * It uses the securely stored seed phrase to sign and send transactions.
- * 
+ *
  * For each transaction leg in the plan:
  * - Connects to the appropriate RPC endpoint for the chain (chainId)
  * - Creates a USDC transfer transaction to the recipient address
  * - Signs the transaction using the wallet derived from the seed phrase
  * - Sends the transaction to the network
  * - Waits for transaction receipt and extracts the txHash
- * 
+ *
  * Errors are handled gracefully - if a transaction fails, that sub-transaction
  * is marked as "failed" but processing continues with other legs.
- * 
+ *
  * Note: USDC uses 6 decimals, so amounts are in micro-USDC (smallest unit).
  */
 
@@ -83,17 +83,17 @@ export interface ExecuteTransactionPlanParams {
 /**
  * Execute a transaction plan by sending token transfers on the specified chains.
  * Supports both USDC (ERC20) and native ETH transfers.
- * 
+ *
  * This function handles both single-chain and multi-chain transaction plans.
  * For each leg in the plan, it will:
  * 1. Connect to the appropriate blockchain network
  * 2. Create and sign a transfer transaction (USDC ERC20 or native ETH)
  * 3. Send the transaction and wait for confirmation
  * 4. Return the transaction hash
- * 
+ *
  * @param params - Execution parameters including plan, recipient, and vault credentials
  * @returns Promise resolving to the execution result with txHashes for each leg
- * 
+ *
  * @example
  * ```typescript
  * const result = await executeTransactionPlan({
@@ -102,7 +102,7 @@ export interface ExecuteTransactionPlanParams {
  *   password: userPassword,
  *   encryptedVault: vault
  * });
- * 
+ *
  * if (result.overallSuccess) {
  *   console.log("All transactions sent successfully!");
  *   result.legResults.forEach(leg => {
@@ -144,7 +144,7 @@ export async function executeTransactionPlan(
       for (const leg of plan.legs) {
         try {
           console.log(`Processing transaction leg: ${leg.chainName} (chainId: ${leg.chainId})`);
-          
+
           // Get RPC provider for this chain
           const rpcUrl = getRpcUrlForChain(leg.chainId);
           console.log(`Connecting to RPC: ${rpcUrl}`);
@@ -159,7 +159,7 @@ export async function executeTransactionPlan(
             // Native ETH transfer
             const amount = BigInt(leg.amountUsdc); // amountUsdc field contains wei for ETH
             console.log(`Sending ${amount} wei (${Number(amount) / 1e18} ETH) to ${recipientAddress}`);
-            
+
             // Send native ETH
             tx = await signer.sendTransaction({
               to: recipientAddress,
@@ -191,11 +191,8 @@ export async function executeTransactionPlan(
           const txHash = tx.hash;
           console.log(`Transaction sent! Hash: ${txHash}`);
 
-          // Wait for transaction confirmation (wait for at least 1 confirmation)
-          console.log(`Waiting for confirmation...`);
-          await tx.wait();
-          console.log(`Transaction confirmed!`);
-
+          // Return immediately with hash - don't wait for confirmation
+          // Confirmation will be checked later by the pending transaction system
           legResults.push({
             chainId: leg.chainId,
             chainName: leg.chainName,
@@ -207,7 +204,7 @@ export async function executeTransactionPlan(
           // Handle errors gracefully - mark this leg as failed but continue with others
           const errorMessage = error instanceof Error ? error.message : "Unknown error";
           const errorDetails = error instanceof Error ? error.stack : String(error);
-          
+
           console.error(`Transaction failed on ${leg.chainName} (chainId: ${leg.chainId}):`, {
             error: errorMessage,
             details: errorDetails,
@@ -215,7 +212,7 @@ export async function executeTransactionPlan(
             recipientAddress,
             tokenSymbol,
           });
-          
+
           legResults.push({
             chainId: leg.chainId,
             chainName: leg.chainName,
@@ -249,7 +246,7 @@ export function getRpcUrlForChain(chainId: number): string {
     8453: "https://mainnet.base.org", // Base
     42161: "https://arb1.arbitrum.io/rpc", // Arbitrum
     137: "https://polygon-rpc.com", // Polygon
-    11155111: "https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161", // Ethereum Sepolia
+    11155111: "https://eth-sepolia.api.onfinality.io/public", // Ethereum Sepolia
     // Add more chains as needed
   };
 
@@ -298,4 +295,3 @@ export const ERC20_TRANSFER_ABI = [
     type: "function",
   },
 ] as const;
-
