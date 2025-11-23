@@ -51,14 +51,15 @@ async function getBalancesSummary(address: Address): Promise<BalancesSummaryResp
   const nativeTokensBySymbol: Record<string, { totalWei: bigint; decimals: number; symbol: string }> = {};
   let totalUsdcSmallestUnit = 0n;
 
+  // Fetch all balances in parallel for better performance
+  const balancePromises: Promise<void>[] = [];
+
   // Only iterate over chains that are actually configured in CHAINS
   for (const [chainIdStr, chain] of Object.entries(CHAINS)) {
     const chainId = Number(chainIdStr) as ChainId;
-
-    // Get native balance and group by symbol
-    const nativeBalance = await getNativeBalance(chainId, address);
     const nativeSymbol = chain.native.symbol;
-    
+
+    // Initialize native token entry if not exists
     if (!nativeTokensBySymbol[nativeSymbol]) {
       nativeTokensBySymbol[nativeSymbol] = {
         totalWei: 0n,
@@ -66,15 +67,27 @@ async function getBalancesSummary(address: Address): Promise<BalancesSummaryResp
         symbol: nativeSymbol,
       };
     }
-    nativeTokensBySymbol[nativeSymbol].totalWei += nativeBalance;
 
-    // Get USDC balance
+    // Fetch native balance in parallel
+    balancePromises.push(
+      getNativeBalance(chainId, address).then((nativeBalance) => {
+        nativeTokensBySymbol[nativeSymbol].totalWei += nativeBalance;
+      })
+    );
+
+    // Fetch USDC balance in parallel if configured
     const usdcToken = chain.commonTokens.USDC;
     if (usdcToken) {
-      const usdcBalance = await getErc20Balance(chainId, usdcToken, address);
-      totalUsdcSmallestUnit += usdcBalance;
+      balancePromises.push(
+        getErc20Balance(chainId, usdcToken, address).then((usdcBalance) => {
+          totalUsdcSmallestUnit += usdcBalance;
+        })
+      );
     }
   }
+
+  // Wait for all balance fetches to complete
+  await Promise.all(balancePromises);
 
   // Build totals object with native token symbols as keys
   const totals: Record<string, any> = {};

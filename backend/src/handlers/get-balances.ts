@@ -188,7 +188,7 @@ export async function getErc20Balance(
  * Get native balance directly from RPC provider
  * @param chainId - The chain ID
  * @param wallet - The wallet address
- * @returns The balance in wei
+ * @returns The balance in wei (0n if provider is not available or error occurs)
  */
 export async function getNativeBalanceFromProvider(
   chainId: ChainId,
@@ -199,10 +199,18 @@ export async function getNativeBalanceFromProvider(
   try {
     const provider = providers[chainId];
     if (!provider) {
-      throw new Error(`Provider not configured for chain ${chainId}. Chain may be commented out in chains.ts`);
+      logger.warn(`Provider not configured for chain ${chainId}. Chain may be commented out in chains.ts`);
+      return 0n;
     }
-    const balance = await provider.getBalance(wallet);
+
+    // Check if chain is configured
     const chainConfig = CHAINS[chainId];
+    if (!chainConfig) {
+      logger.warn(`Chain ${chainId} is not configured`);
+      return 0n;
+    }
+
+    const balance = await provider.getBalance(wallet);
     const balanceFormatted = chainConfig ? formatAmount(balance, chainConfig.native.decimals) : balance.toString();
     logger.info("Native balance fetched from RPC", {
       chainId,
@@ -212,8 +220,31 @@ export async function getNativeBalanceFromProvider(
     });
     return balance;
   } catch (error) {
-    logger.error("Failed to fetch native balance from provider", error);
-    throw error;
+    // Handle specific error cases
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    // Handle connection errors (RPC not available, wrong URL, etc.)
+    if (errorMessage.includes("ECONNREFUSED") ||
+        errorMessage.includes("failed to detect network") ||
+        errorMessage.includes("network") ||
+        errorMessage.includes("ENOTFOUND") ||
+        errorMessage.includes("ETIMEDOUT") ||
+        errorMessage.includes("ECONNRESET")) {
+      logger.warn(`RPC provider not available for chain ${chainId}`, {
+        chainId,
+        wallet,
+        error: errorMessage,
+      });
+      return 0n;
+    }
+    
+    logger.error("Failed to fetch native balance from provider", {
+      chainId,
+      wallet,
+      error: errorMessage,
+    });
+    // Return 0n instead of throwing to allow the application to continue
+    return 0n;
   }
 }
 
@@ -271,6 +302,22 @@ export async function getErc20BalanceFromProvider(
   } catch (error) {
     // Handle specific error cases
     const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    // Handle connection errors (RPC not available, wrong URL, etc.)
+    if (errorMessage.includes("ECONNREFUSED") ||
+        errorMessage.includes("failed to detect network") ||
+        errorMessage.includes("network") ||
+        errorMessage.includes("ENOTFOUND") ||
+        errorMessage.includes("ETIMEDOUT") ||
+        errorMessage.includes("ECONNRESET")) {
+      logger.warn(`RPC provider not available for chain ${chainId}`, {
+        chainId,
+        token: token.symbol,
+        wallet,
+        error: errorMessage,
+      });
+      return 0n;
+    }
     
     // If it's a decode error (contract doesn't exist or wrong ABI), return 0
     if (errorMessage.includes("could not decode result data") || 

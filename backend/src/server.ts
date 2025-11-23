@@ -4,7 +4,7 @@ import url from "url";
 import { logger } from "./setup/logger.js";
 import { handleAssetsRequest, handleVerifyRequest, handleSettleRequest, handleBalancesSummaryRequest, handlePlanSendingTransactionRequest, handleApiDocsRequest, handleSwaggerUIRequest, handleTransactionsRequest } from "./routes/index.js";
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 7000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 7001;
 
 const server = http.createServer(async (req, res) => {
   // Enable CORS
@@ -167,6 +167,10 @@ const server = http.createServer(async (req, res) => {
   );
 });
 
+// Increase max listeners to avoid warnings when using hot reload (tsx watch)
+server.setMaxListeners(50);
+process.setMaxListeners(50);
+
 server.on("error", (error: NodeJS.ErrnoException) => {
   if (error.code === "EADDRINUSE") {
     logger.error("Port already in use", {
@@ -174,8 +178,9 @@ server.on("error", (error: NodeJS.ErrnoException) => {
       message: `Port ${PORT} is already in use. Please use a different port by setting PORT environment variable.`,
     });
     console.error(`❌ Error: Port ${PORT} is already in use.`);
-    console.error(`   Try using a different port: PORT=3001 npm run dev:server`);
+    console.error(`   Try using a different port: PORT=7002 npm run dev:server`);
     console.error(`   Or kill the process using port ${PORT}: lsof -ti:${PORT} | xargs kill`);
+    console.error(`   Check what's using the port: lsof -i :${PORT}`);
     process.exit(1);
   } else {
     logger.error("Server error", error);
@@ -210,19 +215,28 @@ server.listen(PORT, "localhost", () => {
   console.log(`📖 API Docs (JSON): http://localhost:${PORT}/api-docs`);
 });
 
-// Graceful shutdown
-process.on("SIGTERM", () => {
-  logger.info("SIGTERM received, shutting down gracefully");
-  server.close(() => {
-    logger.info("Server closed");
-    process.exit(0);
-  });
-});
+// Graceful shutdown - use once() to prevent multiple listeners from being added
+let isShuttingDown = false;
 
-process.on("SIGINT", () => {
-  logger.info("SIGINT received, shutting down gracefully");
+function gracefulShutdown(signal: string) {
+  if (isShuttingDown) {
+    logger.debug(`Already shutting down, ignoring ${signal}`);
+    return;
+  }
+  isShuttingDown = true;
+
+  logger.info(`${signal} received, shutting down gracefully`);
   server.close(() => {
     logger.info("Server closed");
     process.exit(0);
   });
-});
+
+  // Force exit after 10 seconds if graceful shutdown doesn't complete
+  setTimeout(() => {
+    logger.warn("Forcing exit after timeout");
+    process.exit(1);
+  }, 10000);
+}
+
+process.once("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.once("SIGINT", () => gracefulShutdown("SIGINT"));
