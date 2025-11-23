@@ -26,6 +26,16 @@ src/
 
 ## Setup
 
+0. Instantiate the MongoDB via Docker:
+
+```bash
+docker run -d \
+  --name good-old-wallet-mongo \
+  -p 27017:27017 \
+  -e MONGO_INITDB_DATABASE=good_old_wallet \
+  mongo:latest
+```
+
 1. Install dependencies:
 ```bash
 npm install

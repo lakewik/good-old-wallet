@@ -1,6 +1,8 @@
 import http from "http";
+import { Contract } from "ethers";
 import { logger } from "../setup/logger.js";
 import { x402Service, type EvmSafeWcrcPaymentPayload } from "../services/x402.js";
+import { creditUserBalance } from "../db/user.js";
 
 interface SettleRequest {
   paymentPayload: EvmSafeWcrcPaymentPayload;
@@ -63,6 +65,40 @@ export async function handleSettleRequest(
         res.writeHead(500, { "Content-Type": "application/json" });
         res.end(JSON.stringify(result, null, 2));
         return;
+      }
+
+      // Extract payment amount from transaction data (ERC20 transfer)
+      let paymentAmount = 0n;
+      try {
+        const ERC20_ABI = ["function transfer(address to, uint256 amount) returns (bool)"];
+        const iface = new Contract(data.paymentPayload.safeTx.to, ERC20_ABI).interface;
+        const decoded = iface.parseTransaction({ data: data.paymentPayload.safeTx.data });
+        
+        if (decoded && decoded.name === "transfer") {
+          paymentAmount = decoded.args[1] as bigint;
+          logger.info("Decoded payment amount from transaction", {
+            amount: paymentAmount.toString(),
+            safeAddress: data.paymentPayload.safeAddress,
+          });
+        }
+      } catch (error) {
+        logger.warn("Could not decode payment amount, skipping balance credit", error);
+      }
+
+      // Credit user balance in database
+      if (paymentAmount > 0n) {
+        try {
+          await creditUserBalance(data.paymentPayload.safeAddress, paymentAmount);
+          logger.info("User balance credited successfully", {
+            userAddress: data.paymentPayload.safeAddress,
+            amount: paymentAmount.toString(),
+          });
+        } catch (error) {
+          logger.error("Failed to credit user balance", {
+            userAddress: data.paymentPayload.safeAddress,
+            error,
+          });
+        }
       }
 
       // Prepare payment response header

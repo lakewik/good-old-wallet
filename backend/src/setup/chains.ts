@@ -84,7 +84,26 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
   //   },
   //   minNativeBalance: BigInt("3000000000000000"), // 0.003 ETH
   // },
-
+  // [ChainId.ARBITRUM_ONE]: {
+  //   id: ChainId.ARBITRUM_ONE,
+  //   name: "Arbitrum One",
+  //   rpcUrl: process.env.RPC_ARBITRUM_ONE || process.env.RPC_ARBITRUM!,
+  //   native: {
+  //     symbol: "ETH",
+  //     decimals: 18,
+  //     address: NATIVE_TOKEN_ADDRESS,
+  //     isNative: true,
+  //   },
+  //   commonTokens: {
+  //     USDC: {
+  //       symbol: "USDC",
+  //       decimals: 6,
+  //       // Arbitrum One USDC
+  //       address: "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8",
+  //     },
+  //   },
+  //   minNativeBalance: BigInt("5000000000000000"), // 0.005 ETH
+  // },
   // Sepolia testnet chains
   [ChainId.ETHEREUM_SEPOLIA]: {
     id: ChainId.ETHEREUM_SEPOLIA,

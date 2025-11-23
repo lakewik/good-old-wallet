@@ -1,6 +1,6 @@
 import http from "http";
 import { logger } from "../setup/logger.js";
-import { getLatestCIDFromFirstBucket } from "../services/filecoinStorage.js";
+import { getLatestCIDFromFirstBucket } from "../services/filecoin-storage.js";
 import type { Address } from "../setup/types.js";
 
 interface LatestCIDResponse {

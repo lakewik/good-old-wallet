@@ -2,9 +2,16 @@ import "./setup/config.js"; // Load environment variables
 import http from "http";
 import url from "url";
 import { logger } from "./setup/logger.js";
-import { handleAssetsRequest, handleVerifyRequest, handleSettleRequest, handleBalancesSummaryRequest, handlePlanSendingTransactionRequest, handleApiDocsRequest, handleSwaggerUIRequest, handleTransactionsRequest, handleLatestCIDRequest } from "./routes/index.js";
+import { handleAssetsRequest, handleVerifyRequest, handleSettleRequest, handleBalancesSummaryRequest, handlePlanSendingTransactionRequest, handleApiDocsRequest, handleSwaggerUIRequest, handleTransactionsRequest, handleLatestCIDRequest, handlePaymentRequest, handleCounterRequest, handleCounterStatusRequest, handleUserRequest } from "./routes/index.js";
+import { connectToMongoDB, closeMongoDB } from "./setup/mongodb.js";
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 7001;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 7000;
+
+// Initialize MongoDB connection
+connectToMongoDB().catch((error) => {
+  logger.error("Failed to connect to MongoDB on startup", error);
+  console.error("⚠️  Warning: MongoDB connection failed. Some features may not work.");
+});
 
 const server = http.createServer(async (req, res) => {
   // Enable CORS
@@ -155,6 +162,32 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Payment endpoint (returns 402)
+  if (pathname === "/payment" && req.method === "GET") {
+    handlePaymentRequest(req, res);
+    return;
+  }
+
+  // Counter endpoint
+  if (pathname === "/counter" && req.method === "POST") {
+    await handleCounterRequest(req, res);
+    return;
+  }
+
+  // Counter status endpoint
+  const counterStatusMatch = pathname?.match(/^\/counter-status\/(.+)$/);
+  if (counterStatusMatch && req.method === "GET") {
+    const address = counterStatusMatch[1] as string;
+    await handleCounterStatusRequest(req, res, address);
+    return;
+  }
+
+  // User endpoint
+  if (pathname === "/user" && req.method === "POST") {
+    await handleUserRequest(req, res);
+    return;
+  }
+
   // 404 for all other routes
   res.writeHead(404, { "Content-Type": "application/json" });
   res.end(
@@ -170,6 +203,10 @@ const server = http.createServer(async (req, res) => {
         "POST /verify",
         "POST /settle",
         "POST /plan-sending-transaction",
+        "GET /payment",
+        "POST /counter",
+        "GET /counter-status/:address",
+        "POST /user",
         "GET /swagger",
         "GET /api-docs",
       ],
@@ -212,6 +249,10 @@ server.listen(PORT, "localhost", () => {
       "POST /verify",
       "POST /settle",
       "POST /plan-sending-transaction",
+      "GET /payment",
+      "POST /counter",
+      "GET /counter-status/:address",
+      "POST /user",
       "GET /swagger",
       "GET /api-docs",
     ],
@@ -223,6 +264,10 @@ server.listen(PORT, "localhost", () => {
   console.log(`✅ Verify: http://localhost:${PORT}/verify`);
   console.log(`🔒 Settle: http://localhost:${PORT}/settle`);
   console.log(`📋 Plan Sending Transaction: http://localhost:${PORT}/plan-sending-transaction`);
+  console.log(`💳 Payment (402): http://localhost:${PORT}/payment`);
+  console.log(`🔢 Counter: http://localhost:${PORT}/counter`);
+  console.log(`📊 Counter Status: http://localhost:${PORT}/counter-status/:address`);
+  console.log(`👤 User (Get/Create): http://localhost:${PORT}/user`);
   console.log(`📚 Swagger UI: http://localhost:${PORT}/swagger`);
   console.log(`📖 API Docs (JSON): http://localhost:${PORT}/api-docs`);
 });
@@ -238,7 +283,8 @@ function gracefulShutdown(signal: string) {
   isShuttingDown = true;
 
   logger.info(`${signal} received, shutting down gracefully`);
-  server.close(() => {
+  server.close(async () => {
+    await closeMongoDB();
     logger.info("Server closed");
     process.exit(0);
   });

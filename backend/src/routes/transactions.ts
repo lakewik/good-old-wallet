@@ -1,6 +1,6 @@
 import http from "http";
 import { logger } from "../setup/logger.js";
-import { fetchTransactionsFromSQD, fetchTransactionsMultiChain, type Transaction } from "../services/sqdTransactions.js";
+import { fetchTransactionsFromSQD, fetchTransactionsMultiChain, type Transaction } from "../services/sqd-transactions.js";
 import { CHAINS, type Address, ChainId } from "../index.js";
 
 interface TransactionsResponse {

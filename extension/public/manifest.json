@@ -8,6 +8,10 @@
     "default_popup": "popup.html",
     "default_icon": {}
   },
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
   "content_scripts": [],
   "web_accessible_resources": [
     {
@@ -18,7 +22,14 @@
   "permissions": ["storage"],
   "host_permissions": [
     "https://guppy-saving-mistakenly.ngrok-free.app/*",
-    "http://localhost:7001/*",
+    "http://localhost:*/*",
     "https://calib2.ezpdpz.net/*"
-  ]
+  ],
+  "externally_connectable": {
+    "matches": [
+      "http://localhost:3001/*",
+      "http://localhost:*/*",
+      "https://guppy-saving-mistakenly.ngrok-free.app/*"
+    ]
+  }
 }
