@@ -107,6 +107,18 @@ export default function FilecoinBackupButton({
             </div>
             <div
               style={{
+                fontSize: "12px",
+                color: "var(--text-secondary)",
+                fontFamily: "var(--font-family-sans)",
+                textAlign: "center",
+                lineHeight: "1.5",
+                padding: "0 var(--spacing-md)",
+              }}
+            >
+              Accounts metadata have been successfully stored in Filecoin decentralized storage network
+            </div>
+            <div
+              style={{
                 fontSize: "11px",
                 color: "var(--text-muted)",
                 fontFamily: "var(--font-family-mono)",
