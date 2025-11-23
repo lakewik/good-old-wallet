@@ -8,6 +8,8 @@ import { decodeAndVerifyErc20TransferData } from "../utils/decode-and-verify-erc
 import { executeSafeTx } from "../utils/execute-safe-tx.js";
 import { CirclesRpc } from "@aboutcircles/sdk-rpc";
 
+import dotenv from "dotenv";
+dotenv.config();
 /**
  * X402 Payment Protocol Service
  * Handles verification and settlement of EVM Safe wCRC payments
