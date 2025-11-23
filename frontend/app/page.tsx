@@ -21,6 +21,11 @@ export default function VintageWalletCheckout() {
   const [counterLoading, setCounterLoading] = useState(false)
   const [counterStatus, setCounterStatus] = useState<"idle" | "success" | "out_of_funds">("idle")
 
+  // Payment flow state
+  const [paymentStep, setPaymentStep] = useState<"idle" | "creating" | "ready" | "verifying" | "settling" | "complete">("idle")
+  const [paymentPayload, setPaymentPayload] = useState<any>(null)
+  const [paymentAmount, setPaymentAmount] = useState("0.01") // Default 0.01 xDAI
+
   useEffect(() => {
     const storedKey = localStorage.getItem("wallet_pk")
     if (storedKey) {
@@ -45,10 +50,11 @@ export default function VintageWalletCheckout() {
     if (!address) return
 
     try {
-      const response = await fetch(`http://localhost:3000/counter-status/${address}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/counter-status/${address}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
         },
       })
 
@@ -75,10 +81,11 @@ export default function VintageWalletCheckout() {
       const userAddress = wallet.address
 
       // Initialize user in database (get or create)
-      const initResponse = await fetch("http://localhost:3000/user", {
+      const initResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
         },
         body: JSON.stringify({ userAddress }),
       })
@@ -106,33 +113,141 @@ export default function VintageWalletCheckout() {
     }
   }
 
-  const handlePayment = async () => {
+  const createPaymentTransaction = async () => {
     setIsLoading(true)
-    setStatus("idle")
+    setPaymentStep("creating")
 
     try {
-      const response = await fetch("http://localhost:3000/payment", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
+      const BACKEND_ADDRESS = process.env.NEXT_PUBLIC_BACKEND_WALLET_ADDRESS || "0x572E3a2d12163D8FACCF5385Ce363D152EA3A33E"
+      const TOKEN_ADDRESS = "0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d" // wxDAI on Gnosis
+      
+      // Create payment request for extension
+      const paymentRequest = {
+        to: BACKEND_ADDRESS,
+        token: TOKEN_ADDRESS,
+        amount: paymentAmount,
+        chainId: 100, // Gnosis
+      }
 
-      if (response.status === 402) {
-        const data = await response.json()
-        setStatus("error")
-        console.log("Payment Required:", data.message)
-      } else if (response.ok) {
-        setStatus("success")
+      console.log("Opening wallet extension with payment request:", paymentRequest)
+
+      // Get extension ID from environment or use a known ID
+      // You'll need to set this after building the extension
+      const EXTENSION_ID = process.env.NEXT_PUBLIC_WALLET_EXTENSION_ID
+
+      // Send message to extension to open popup with payment details
+      const chromeExtension = (window as any).chrome
+      if (typeof window !== "undefined" && chromeExtension?.runtime) {
+        chromeExtension.runtime.sendMessage(
+          EXTENSION_ID, // Extension ID is required when calling from webpage
+          {
+            type: "CREATE_PAYMENT",
+            payload: paymentRequest,
+          },
+          (response: any) => {
+            if (chromeExtension.runtime.lastError) {
+              console.error("Extension error:", chromeExtension.runtime.lastError)
+              throw new Error(`Extension not responding: ${chromeExtension.runtime.lastError.message}`)
+            }
+            
+            if (response?.success && response?.paymentPayload) {
+              console.log("Received payment payload from extension:", response.paymentPayload)
+              setPaymentPayload(response.paymentPayload)
+              setPaymentStep("ready")
+            } else {
+              throw new Error("Failed to create payment in extension")
+            }
+          }
+        )
       } else {
-        setStatus("error")
+        // Fallback: If extension not detected, show error
+        throw new Error("Good Old Wallet extension not detected. Please install the extension.")
       }
     } catch (error) {
+      console.error("Error creating payment transaction:", error)
       setStatus("error")
-      console.error("Payment request failed:", error)
+      setPaymentStep("idle")
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleTopUp = async () => {
+    if (!paymentPayload) {
+      console.error("No payment payload")
+      return
+    }
+
+    setIsLoading(true)
+    setPaymentStep("verifying")
+
+    try {
+      // Step 1: Verify the payment
+      console.log("Verifying payment...")
+      const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/verify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
+        },
+        body: JSON.stringify(paymentPayload),
+      })
+
+      const verifyData = await verifyResponse.json()
+      console.log("Verification response:", verifyData)
+
+      if (!verifyResponse.ok || !verifyData.valid) {
+        throw new Error(`Verification failed: ${verifyData.reason}`)
+      }
+
+      console.log("✅ Payment verified!")
+
+      // Step 2: Automatically settle after verification
+      setPaymentStep("settling")
+      
+      // Small delay for UX
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      console.log("Settling payment...")
+      const settleResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/settle`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
+        },
+        body: JSON.stringify(paymentPayload),
+      })
+
+      const settleData = await settleResponse.json()
+      console.log("Settlement response:", settleData)
+
+      if (!settleResponse.ok || !settleData.settled) {
+        throw new Error(`Settlement failed: ${settleData.reason}`)
+      }
+
+      console.log("✅ Payment settled!")
+      console.log("Transaction hash:", settleData.txHash)
+
+      setPaymentStep("complete")
+      setStatus("success")
+
+      // Refresh balance after a moment
+      setTimeout(() => {
+        fetchCounterStatus()
+      }, 2000)
+    } catch (error) {
+      console.error("Payment flow error:", error)
+      setStatus("error")
+      setPaymentStep("idle")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const resetPayment = () => {
+    setPaymentStep("idle")
+    setPaymentPayload(null)
+    setStatus("idle")
   }
 
   const handleCounter = async () => {
@@ -140,10 +255,11 @@ export default function VintageWalletCheckout() {
     setCounterStatus("idle")
 
     try {
-      const response = await fetch("http://localhost:3000/counter", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/counter`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
         },
         body: JSON.stringify({ userAddress: address }),
       })
@@ -321,36 +437,114 @@ export default function VintageWalletCheckout() {
               )}
             </div>
 
-            <button
-              onClick={handlePayment}
-              disabled={isLoading}
-              className="w-full group relative px-8 py-3 bg-transparent overflow-hidden border border-neutral-700 hover:border-neutral-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
-            >
-              <span className="relative z-10 flex items-center justify-center text-xs uppercase tracking-[0.25em] text-neutral-300 group-hover:text-white transition-colors">
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  "Request Payment"
-                )}
-              </span>
-            </button>
+            <div className="h-px w-full bg-neutral-900" />
 
-            {/* Status Messages */}
-            <div className="h-4 text-center">
-              {status === "success" && (
-                <p className="text-[10px] uppercase tracking-widest text-neutral-400 animate-in fade-in duration-500">
-                  Payment Request Sent Successfully
-                </p>
-              )}
-              {status === "error" && (
-                <p className="text-[10px] uppercase tracking-widest text-red-900/70 animate-in fade-in duration-500">
-                  402 Payment Required
-                </p>
-              )}
+            {/* Payment Amount Input */}
+            <div className="space-y-2 w-full">
+              <label className="text-[9px] uppercase tracking-[0.2em] text-neutral-500">Top Up Amount (xDAI)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.001"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                disabled={paymentStep !== "idle"}
+                className="w-full bg-transparent border border-neutral-800 rounded-sm px-4 py-3 text-sm text-neutral-300 placeholder:text-neutral-800 focus:outline-none focus:border-neutral-500 transition-colors font-mono"
+              />
             </div>
+
+            {/* Payment Flow Buttons */}
+            {paymentStep === "idle" && (
+              <button
+                onClick={createPaymentTransaction}
+                disabled={isLoading}
+                className="w-full group relative px-8 py-3 bg-transparent overflow-hidden border border-neutral-700 hover:border-neutral-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
+              >
+                <span className="relative z-10 flex items-center justify-center text-xs uppercase tracking-[0.25em] text-neutral-300 group-hover:text-white transition-colors">
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                      Creating Transaction...
+                    </>
+                  ) : (
+                    "Request Payment"
+                  )}
+                </span>
+              </button>
+            )}
+
+            {paymentStep === "ready" && (
+              <div className="space-y-4 w-full">
+                <div className="px-4 py-3 border border-green-900/30 bg-green-900/10 rounded-sm">
+                  <p className="text-[10px] uppercase tracking-widest text-green-400/70">
+                    Transaction Ready
+                  </p>
+                </div>
+                <button
+                  onClick={handleTopUp}
+                  disabled={isLoading}
+                  className="w-full group relative px-8 py-3 bg-transparent overflow-hidden border border-green-700 hover:border-green-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
+                >
+                  <span className="relative z-10 flex items-center justify-center text-xs uppercase tracking-[0.25em] text-green-300 group-hover:text-green-200 transition-colors">
+                    Top Up
+                  </span>
+                </button>
+                <button
+                  onClick={resetPayment}
+                  className="w-full text-[9px] uppercase tracking-widest text-neutral-600 hover:text-neutral-400 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            {paymentStep === "verifying" && (
+              <div className="px-4 py-3 border border-blue-900/30 bg-blue-900/10 rounded-sm">
+                <p className="text-[10px] uppercase tracking-widest text-blue-400/70 flex items-center justify-center">
+                  <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                  Verifying Payment...
+                </p>
+              </div>
+            )}
+
+            {paymentStep === "settling" && (
+              <div className="px-4 py-3 border border-yellow-900/30 bg-yellow-900/10 rounded-sm">
+                <p className="text-[10px] uppercase tracking-widest text-yellow-400/70 flex items-center justify-center">
+                  <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                  Settling Transaction...
+                </p>
+              </div>
+            )}
+
+            {paymentStep === "complete" && (
+              <div className="space-y-4 w-full">
+                <div className="px-4 py-3 border border-green-900/30 bg-green-900/10 rounded-sm">
+                  <p className="text-[10px] uppercase tracking-widest text-green-400/70">
+                    ✅ Payment Successful!
+                  </p>
+                  <p className="text-[9px] tracking-wider text-neutral-600 mt-1">
+                    Balance will update shortly
+                  </p>
+                </div>
+                <button
+                  onClick={resetPayment}
+                  className="w-full group relative px-8 py-3 bg-transparent overflow-hidden border border-neutral-700 hover:border-neutral-400 transition-colors duration-300"
+                >
+                  <span className="relative z-10 flex items-center justify-center text-xs uppercase tracking-[0.25em] text-neutral-300 group-hover:text-white transition-colors">
+                    Make Another Payment
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {/* Error Message */}
+            {status === "error" && paymentStep === "idle" && (
+              <div className="px-4 py-3 border border-red-900/30 bg-red-900/10 rounded-sm">
+                <p className="text-[10px] uppercase tracking-widest text-red-900/70">
+                  Payment Failed - Try Again
+                </p>
+              </div>
+            )}
 
             {/* Optional Logout for UX completeness, small and unobtrusive */}
             <button
@@ -363,6 +557,8 @@ export default function VintageWalletCheckout() {
                 setBalance("0")
                 setCanAfford(false)
                 setCounterStatus("idle")
+                setPaymentStep("idle")
+                setPaymentPayload(null)
               }}
               className="w-full text-[9px] uppercase tracking-widest text-neutral-600 hover:text-neutral-400 transition-colors"
             >

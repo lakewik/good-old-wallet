@@ -7,8 +7,15 @@ import { ChainId, Address } from "../setup/types.js";
  * Based on: https://docs.sqd.ai/subsquid-network/reference/networks/
  */
 const SQD_ROUTERS: Record<ChainId, string> = {
-  [ChainId.ETHEREUM]: "https://rb05.sqd-archive.net",
-  [ChainId.BASE]: "https://rb05.sqd-archive.net", // Base uses same router, different dataset
+  // [ChainId.ETHEREUM]: "https://rb05.sqd-archive.net",
+  // [ChainId.BASE]: "https://rb05.sqd-archive.net", // Base uses same router, different dataset
+  // [ChainId.OPTIMISM]: "https://rb05.sqd-archive.net",
+  // [ChainId.ARBITRUM_ONE]: "https://rb05.sqd-archive.net",
+  [ChainId.ARBITRUM_SEPOLIA]: "https://rb05.sqd-archive.net",
+  [ChainId.OPTIMISM_SEPOLIA]: "https://rb05.sqd-archive.net",
+  [ChainId.GNOSIS]: "https://rb05.sqd-archive.net",
+  [ChainId.ETHEREUM_SEPOLIA]: "https://rb05.sqd-archive.net",
+  [ChainId.BASE_SEPOLIA]: "https://rb05.sqd-archive.net",
   // Add more chains as needed
 };
 
@@ -17,8 +24,15 @@ const SQD_ROUTERS: Record<ChainId, string> = {
  * These are base64-encoded dataset URLs
  */
 const SQD_DATASETS: Record<ChainId, string> = {
-  [ChainId.ETHEREUM]: "czM6Ly9ldGhlcmV1bS1tYWlubmV0", // base64("s3://ethereum-mainnet")
-  [ChainId.BASE]: "czM6Ly9iYXNlLW1haW5uZXQ", // base64("s3://base-mainnet") - adjust as needed
+  // [ChainId.ETHEREUM]: "czM6Ly9ldGhlcmV1bS1tYWlubmV0", // base64("s3://ethereum-mainnet")
+  // [ChainId.BASE]: "czM6Ly9iYXNlLW1haW5uZXQ", // base64("s3://base-mainnet") - adjust as needed
+  // [ChainId.OPTIMISM]: "czM6Ly9vcHRpbW9yZS1tYWlubmV0", // base64("s3://optimism-mainnet")
+  // [ChainId.ARBITRUM_ONE]: "czM6Ly9hcmJ5dG9yZS1tYWlubmV0", // base64("s3://arbitrum-mainnet")
+  [ChainId.ARBITRUM_SEPOLIA]: "czM6Ly9hcmJ5dG9yZS1zZXBvZWxhLW1haW5uZXQ", // base64("s3://arbitrum-sepolia-mainnet")
+  [ChainId.OPTIMISM_SEPOLIA]: "czM6Ly9vcHRpbW9yZS1zZXBvZWxhLW1haW5uZXQ", // base64("s3://optimism-sepolia-mainnet")
+  [ChainId.GNOSIS]: "czM6Ly9nb25zaXMtbWFpbm5ldA==", // base64("s3://gnosis-mainnet")
+  [ChainId.ETHEREUM_SEPOLIA]: "czM6Ly9ldGhlcmV1bS1zZXBvZWxhLW1haW5uZXQ", // base64("s3://ethereum-sepolia-mainnet")
+  [ChainId.BASE_SEPOLIA]: "czM6Ly9iYXNlLXNlcG9lbGEtbWFpbm5ldA==", // base64("s3://base-sepolia-mainnet")
 };
 
 export interface Transaction {
