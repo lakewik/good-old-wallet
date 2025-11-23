@@ -12,6 +12,8 @@ export interface BalancesSummaryResponse {
     [tokenSymbol: string]: {
       totalSmallestUnit: string;
       totalFormatted: string;
+      chainsCount?: number;
+      chainsWithBalanceCount?: number;
     };
   };
   totalPortfolioValueUSD: string;

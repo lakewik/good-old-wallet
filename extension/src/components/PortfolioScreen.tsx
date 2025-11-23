@@ -36,6 +36,8 @@ interface Token {
   symbol: string;
   amount: string;
   valueUSD: string;
+  chainsCount?: number;
+  chainsWithBalanceCount?: number;
 }
 
 interface TokenCardProps {
@@ -125,6 +127,18 @@ function TokenCard({ token, onSend }: TokenCardProps) {
         >
           {token.symbol}
         </div>
+        {token.chainsWithBalanceCount !== undefined && token.chainsWithBalanceCount > 0 && (
+          <div
+            style={{
+              fontSize: "9px",
+              color: "var(--text-muted)",
+              opacity: 0.7,
+              marginTop: "2px",
+            }}
+          >
+            {token.chainsWithBalanceCount} {token.chainsWithBalanceCount === 1 ? "chain" : "chains"}
+          </div>
+        )}
       </div>
 
       {/* Third Column: Dollar Value and Token Amount */}
@@ -416,6 +430,8 @@ export default function PortfolioScreen({
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}`,
+                chainsCount: ethTotal.chainsCount,
+                chainsWithBalanceCount: ethTotal.chainsWithBalanceCount,
               });
             }
 
@@ -432,6 +448,8 @@ export default function PortfolioScreen({
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}`,
+                chainsCount: usdcTotal.chainsCount,
+                chainsWithBalanceCount: usdcTotal.chainsWithBalanceCount,
               });
             }
 

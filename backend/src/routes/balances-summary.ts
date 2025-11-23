@@ -9,6 +9,8 @@ interface BalancesSummaryResponse {
     [tokenSymbol: string]: {
       totalSmallestUnit: string;
       totalFormatted: string;
+      chainsCount: number;
+      chainsWithBalanceCount: number;
     };
   };
   totalPortfolioValueUSD: string;
@@ -48,8 +50,16 @@ async function getEthPriceUSD(): Promise<number> {
 
 async function getBalancesSummary(address: Address): Promise<BalancesSummaryResponse> {
   // Group native tokens by symbol (in case different chains have different native tokens)
-  const nativeTokensBySymbol: Record<string, { totalWei: bigint; decimals: number; symbol: string }> = {};
+  const nativeTokensBySymbol: Record<string, { 
+    totalWei: bigint; 
+    decimals: number; 
+    symbol: string; 
+    chainsCount: number;
+    chainBalances: bigint[]; // Track individual chain balances to count non-zero ones
+  }> = {};
   let totalUsdcSmallestUnit = 0n;
+  let usdcChainsCount = 0;
+  const usdcChainBalances: bigint[] = []; // Track individual USDC chain balances
 
   // Fetch all balances in parallel for better performance
   const balancePromises: Promise<void>[] = [];
@@ -65,22 +75,29 @@ async function getBalancesSummary(address: Address): Promise<BalancesSummaryResp
         totalWei: 0n,
         decimals: chain.native.decimals,
         symbol: nativeSymbol,
+        chainsCount: 0,
+        chainBalances: [],
       };
     }
+    // Increment chains count for this native token
+    nativeTokensBySymbol[nativeSymbol].chainsCount++;
 
     // Fetch native balance in parallel
     balancePromises.push(
       getNativeBalance(chainId, address).then((nativeBalance) => {
         nativeTokensBySymbol[nativeSymbol].totalWei += nativeBalance;
+        nativeTokensBySymbol[nativeSymbol].chainBalances.push(nativeBalance);
       })
     );
 
     // Fetch USDC balance in parallel if configured
     const usdcToken = chain.commonTokens.USDC;
     if (usdcToken) {
+      usdcChainsCount++;
       balancePromises.push(
         getErc20Balance(chainId, usdcToken, address).then((usdcBalance) => {
           totalUsdcSmallestUnit += usdcBalance;
+          usdcChainBalances.push(usdcBalance);
         })
       );
     }
@@ -94,16 +111,25 @@ async function getBalancesSummary(address: Address): Promise<BalancesSummaryResp
   
   // Add native tokens using their symbols as keys
   for (const [symbol, tokenData] of Object.entries(nativeTokensBySymbol)) {
+    // Count chains with non-zero balance
+    const chainsWithBalanceCount = tokenData.chainBalances.filter(balance => balance > 0n).length;
+    
     totals[symbol] = {
       totalSmallestUnit: tokenData.totalWei.toString(),
       totalFormatted: formatBalance(tokenData.totalWei, tokenData.decimals),
+      chainsCount: tokenData.chainsCount,
+      chainsWithBalanceCount,
     };
   }
   
-  // Add USDC
+  // Add USDC - count chains with non-zero USDC balance
+  const usdcChainsWithBalanceCount = usdcChainBalances.filter(balance => balance > 0n).length;
+  
   totals.USDC = {
     totalSmallestUnit: totalUsdcSmallestUnit.toString(),
     totalFormatted: formatBalance(totalUsdcSmallestUnit, 6), // USDC has 6 decimals
+    chainsCount: usdcChainsCount,
+    chainsWithBalanceCount: usdcChainsWithBalanceCount,
   };
 
   // Calculate total portfolio value in USD
@@ -177,6 +203,14 @@ function isValidAddress(address: string): address is Address {
  *                         totalFormatted:
  *                           type: string
  *                           example: "5.3"
+ *                         chainsCount:
+ *                           type: integer
+ *                           description: Number of chains where this token appears
+ *                           example: 4
+ *                         chainsWithBalanceCount:
+ *                           type: integer
+ *                           description: Number of chains where this token has a non-zero balance
+ *                           example: 2
  *                     USDC:
  *                       type: object
  *                       properties:
@@ -186,6 +220,14 @@ function isValidAddress(address: string): address is Address {
  *                         totalFormatted:
  *                           type: string
  *                           example: "400"
+ *                         chainsCount:
+ *                           type: integer
+ *                           description: Number of chains where this token appears
+ *                           example: 4
+ *                         chainsWithBalanceCount:
+ *                           type: integer
+ *                           description: Number of chains where this token has a non-zero balance
+ *                           example: 2
  *                 totalPortfolioValueUSD:
  *                   type: string
  *                   description: Total portfolio value in USD (ETH value + USDC value)
