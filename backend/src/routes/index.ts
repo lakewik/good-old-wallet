@@ -8,4 +8,5 @@ export { handleBalancesSummaryRequest } from "./balances-summary.js";
 export { handlePlanSendingTransactionRequest } from "./plan-sending-transaction.js";
 export { handleApiDocsRequest, handleSwaggerUIRequest } from "./swagger.js";
 export { handleTransactionsRequest } from "./transactions.js";
+export { handleLatestCIDRequest } from "./latestCid.js";
 

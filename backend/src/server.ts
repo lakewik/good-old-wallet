@@ -2,7 +2,7 @@ import "./setup/config.js"; // Load environment variables
 import http from "http";
 import url from "url";
 import { logger } from "./setup/logger.js";
-import { handleAssetsRequest, handleVerifyRequest, handleSettleRequest, handleBalancesSummaryRequest, handlePlanSendingTransactionRequest, handleApiDocsRequest, handleSwaggerUIRequest, handleTransactionsRequest } from "./routes/index.js";
+import { handleAssetsRequest, handleVerifyRequest, handleSettleRequest, handleBalancesSummaryRequest, handlePlanSendingTransactionRequest, handleApiDocsRequest, handleSwaggerUIRequest, handleTransactionsRequest, handleLatestCIDRequest } from "./routes/index.js";
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 7001;
 
@@ -129,6 +129,14 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Latest CID endpoint
+  const latestCidMatch = pathname?.match(/^\/latest-cid\/(.+)$/);
+  if (latestCidMatch && req.method === "GET") {
+    const address = latestCidMatch[1] as string;
+    await handleLatestCIDRequest(req, res, address);
+    return;
+  }
+
   // Verify endpoint
   if (pathname === "/verify") {
     await handleVerifyRequest(req, res);
@@ -157,6 +165,8 @@ const server = http.createServer(async (req, res) => {
         "GET /health",
         "GET /assets/:address",
         "GET /balancesSummary/:address",
+        "GET /transactions/:address",
+        "GET /latest-cid/:address",
         "POST /verify",
         "POST /settle",
         "POST /plan-sending-transaction",
@@ -197,6 +207,8 @@ server.listen(PORT, "localhost", () => {
       "GET /health",
       "GET /assets/:address",
       "GET /balancesSummary/:address",
+      "GET /transactions/:address",
+      "GET /latest-cid/:address",
       "POST /verify",
       "POST /settle",
       "POST /plan-sending-transaction",
