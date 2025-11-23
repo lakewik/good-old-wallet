@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Button from "./Button";
 import { PageContainer, ContentContainer } from "./Container";
 import { LOGO_PATH, LOGO_ALT } from "../constants";
@@ -53,6 +53,8 @@ export default function SendScreen({
 }: SendScreenProps) {
   const [amount, setAmount] = useState("");
   const [address, setAddress] = useState("");
+  const [resolvedAddress, setResolvedAddress] = useState<string | null>(null);
+  const [isResolvingEns, setIsResolvingEns] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmationPlan, setConfirmationPlan] = useState<TransactionPlan | null>(null);
@@ -74,6 +76,52 @@ export default function SendScreen({
   const handleMaxClick = () => {
     setAmount(token.amount);
   };
+
+  // Resolve ENS name to address
+  useEffect(() => {
+    const resolveEns = async () => {
+      const input = address.trim();
+      
+      // Check if input looks like an ENS name (ends with .eth)
+      const isEnsName = input.endsWith('.eth') && input.length > 4;
+      
+      if (!isEnsName) {
+        setResolvedAddress(null);
+        setIsResolvingEns(false);
+        return;
+      }
+
+      setIsResolvingEns(true);
+      setResolvedAddress(null);
+
+      try {
+        // Dynamically import ethers to resolve ENS
+        const { ethers } = await import("ethers");
+        
+        // Use Ethereum mainnet RPC for ENS resolution
+        const provider = new ethers.JsonRpcProvider("https://eth.llamarpc.com");
+        const resolved = await provider.resolveName(input);
+        
+        if (resolved) {
+          setResolvedAddress(resolved.toLowerCase());
+        } else {
+          setResolvedAddress(null);
+        }
+      } catch (error) {
+        console.error("Error resolving ENS:", error);
+        setResolvedAddress(null);
+      } finally {
+        setIsResolvingEns(false);
+      }
+    };
+
+    // Debounce ENS resolution
+    const timeoutId = setTimeout(() => {
+      resolveEns();
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [address]);
 
   const handleSend = async () => {
     if (!canSend) return;
@@ -102,8 +150,11 @@ export default function SendScreen({
         throw new Error("Failed to get wallet address");
       }
 
+      // Use resolved address if ENS was resolved, otherwise use the input address
+      const recipientAddress = resolvedAddress || address.trim();
+
       // Validate address format
-      if (!address.match(/^0x[a-fA-F0-9]{40}$/i)) {
+      if (!recipientAddress.match(/^0x[a-fA-F0-9]{40}$/i)) {
         setError("Invalid recipient address format");
         setIsLoading(false);
         return;
@@ -116,7 +167,7 @@ export default function SendScreen({
         // USDC: Use backend API for planning
         const planRequest: PlanRequest = {
           sourceAddress,
-          destinationAddress: address.trim(),
+          destinationAddress: recipientAddress,
           amount: amount,
           tokenName: "USDC",
         };
@@ -249,7 +300,7 @@ export default function SendScreen({
     return (
       <ConfirmationScreen
         plan={confirmationPlan}
-        recipientAddress={address}
+        recipientAddress={resolvedAddress || address}
         tokenSymbol={token.symbol}
         onApprove={handleApprove}
         onCancel={handleCancelConfirmation}
@@ -535,6 +586,65 @@ export default function SendScreen({
               e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
             }}
           />
+          {/* Resolved ENS Address Display */}
+          {(resolvedAddress || isResolvingEns) && (
+            <div
+              style={{
+                marginTop: "var(--spacing-xs)",
+                fontSize: "10px",
+                color: "var(--text-muted)",
+                fontFamily: "var(--font-family-mono)",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              {isResolvingEns ? (
+                <>
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{
+                      animation: "spin 1s linear infinite",
+                    }}
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeDasharray="32"
+                      strokeDashoffset="32"
+                      opacity="0.3"
+                    />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeDasharray="32"
+                      strokeDashoffset="24"
+                    />
+                  </svg>
+                  <span>Resolving ENS...</span>
+                </>
+              ) : resolvedAddress ? (
+                <span style={{ opacity: 0.8 }}>
+                  {resolvedAddress}
+                </span>
+              ) : null}
+            </div>
+          )}
         </div>
 
 
