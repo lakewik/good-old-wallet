@@ -2,7 +2,7 @@ import "./setup/config.js"; // Load environment variables
 import http from "http";
 import url from "url";
 import { logger } from "./setup/logger.js";
-import { handleAssetsRequest, handleVerifyRequest, handleSettleRequest, handleBalancesSummaryRequest, handlePlanSendingTransactionRequest, handleApiDocsRequest, handleSwaggerUIRequest, handleTransactionsRequest, handleLatestCIDRequest } from "./routes/index.js";
+import { handleAssetsRequest, handleVerifyRequest, handleSettleRequest, handleBalancesSummaryRequest, handlePlanSendingTransactionRequest, handleApiDocsRequest, handleSwaggerUIRequest, handleTransactionsRequest, handleLatestCIDRequest, handlePaymentRequest } from "./routes/index.js";
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 7001;
 
@@ -155,6 +155,12 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Payment endpoint (returns 402)
+  if (pathname === "/payment" && req.method === "GET") {
+    handlePaymentRequest(req, res);
+    return;
+  }
+
   // 404 for all other routes
   res.writeHead(404, { "Content-Type": "application/json" });
   res.end(
@@ -170,6 +176,7 @@ const server = http.createServer(async (req, res) => {
         "POST /verify",
         "POST /settle",
         "POST /plan-sending-transaction",
+        "GET /payment",
         "GET /swagger",
         "GET /api-docs",
       ],
@@ -212,6 +219,7 @@ server.listen(PORT, "localhost", () => {
       "POST /verify",
       "POST /settle",
       "POST /plan-sending-transaction",
+      "GET /payment",
       "GET /swagger",
       "GET /api-docs",
     ],
@@ -223,6 +231,7 @@ server.listen(PORT, "localhost", () => {
   console.log(`✅ Verify: http://localhost:${PORT}/verify`);
   console.log(`🔒 Settle: http://localhost:${PORT}/settle`);
   console.log(`📋 Plan Sending Transaction: http://localhost:${PORT}/plan-sending-transaction`);
+  console.log(`💳 Payment (402): http://localhost:${PORT}/payment`);
   console.log(`📚 Swagger UI: http://localhost:${PORT}/swagger`);
   console.log(`📖 API Docs (JSON): http://localhost:${PORT}/api-docs`);
 });
