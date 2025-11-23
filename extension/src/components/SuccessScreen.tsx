@@ -5,6 +5,7 @@ import PortfolioScreen from "./PortfolioScreen";
 interface SuccessScreenProps {
   encryptedVault: EncryptedVault;
   password: string;
+  restoredFromFilecoin?: boolean;
 }
 
 /**
@@ -16,9 +17,14 @@ interface SuccessScreenProps {
 export default function SuccessScreen({
   encryptedVault,
   password,
+  restoredFromFilecoin = false,
 }: SuccessScreenProps) {
   // Redirect to portfolio screen
   return (
-    <PortfolioScreen encryptedVault={encryptedVault} password={password} />
+    <PortfolioScreen 
+      encryptedVault={encryptedVault} 
+      password={password}
+      restoredFromFilecoin={restoredFromFilecoin}
+    />
   );
 }

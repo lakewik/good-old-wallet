@@ -9,6 +9,7 @@ import { deriveWalletFromPhrase } from "./accountManager";
 import { getAccountIndices, getAllAccountColors, getAllAccountNames } from "./storage";
 import { WalletVault } from "./WalletVault";
 import type { EncryptedVault } from "./WalletVault";
+import { API_BASE_URL } from "../constants";
 
 interface AccountData {
   walletIdentifier: string; // Tag to identify this wallet
@@ -201,7 +202,7 @@ export async function restoreFromFilecoin(
     
     // Get latest CID from backend
     onProgress?.("Retrieving Filecoin backup...");
-    const response = await fetch(`http://localhost:7001/latest-cid/${account0Address}`, {
+    const response = await fetch(`${API_BASE_URL}/latest-cid/${account0Address}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

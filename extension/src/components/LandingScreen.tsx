@@ -39,6 +39,7 @@ export default function LandingScreen() {
   );
   const [savedPassword, setSavedPassword] = useState<string>("");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [restoredFromFilecoin, setRestoredFromFilecoin] = useState(false);
 
   const handleImportSeedPhrase = async () => {
     // Reset states
@@ -91,10 +92,12 @@ export default function LandingScreen() {
           }
           
           setStatusMessage("✅ Account data restored from Filecoin backup");
+          setRestoredFromFilecoin(true);
           console.log("✅ Account data restored from Filecoin backup");
         } else {
           console.log("No backup found, starting with default account");
           setStatusMessage(null);
+          setRestoredFromFilecoin(false);
         }
       } catch (restoreError) {
         console.error("Error restoring from backup (continuing anyway):", restoreError);
@@ -131,7 +134,11 @@ export default function LandingScreen() {
   // Show success screen if we have encrypted vault
   if (encryptedVault) {
     return (
-      <SuccessScreen encryptedVault={encryptedVault} password={savedPassword} />
+      <SuccessScreen 
+        encryptedVault={encryptedVault} 
+        password={savedPassword}
+        restoredFromFilecoin={restoredFromFilecoin}
+      />
     );
   }
 

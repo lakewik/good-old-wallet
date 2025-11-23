@@ -27,6 +27,7 @@ import { getBlockExplorerUrl } from "../utils/blockExplorers";
 interface PortfolioScreenProps {
   password: string;
   encryptedVault: EncryptedVault;
+  restoredFromFilecoin?: boolean;
 }
 
 interface Token {
@@ -207,6 +208,7 @@ function TokenCard({ token, onSend }: TokenCardProps) {
 export default function PortfolioScreen({
   password,
   encryptedVault,
+  restoredFromFilecoin = false,
 }: PortfolioScreenProps) {
   const [address, setAddress] = useState<string>("");
   const [totalPortfolioValue, setTotalPortfolioValue] =
@@ -221,6 +223,7 @@ export default function PortfolioScreen({
     PendingTransaction[]
   >([]);
   const [accountColor, setAccountColor] = useState<string>("#3b82f6");
+  const [showRestoreSuccess, setShowRestoreSuccess] = useState(false);
   const hasLoadedRef = useRef(false);
 
   useEffect(() => {
@@ -230,6 +233,17 @@ export default function PortfolioScreen({
     loadWalletData();
     loadPendingTransactions();
   }, []);
+
+  // Show restore success banner if restored from Filecoin
+  useEffect(() => {
+    if (restoredFromFilecoin) {
+      setShowRestoreSuccess(true);
+      const timer = setTimeout(() => {
+        setShowRestoreSuccess(false);
+      }, 5000); // Hide after 5 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [restoredFromFilecoin]);
 
   const loadPendingTransactions = async () => {
     try {
@@ -913,6 +927,44 @@ export default function PortfolioScreen({
         </div>
       </div>
       <FilecoinBackupButton password={password} encryptedVault={encryptedVault} />
+      
+      {/* Filecoin Restore Success Banner */}
+      {showRestoreSuccess && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "20px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            backgroundColor: "#22c55e",
+            color: "white",
+            padding: "12px 24px",
+            borderRadius: "8px",
+            fontSize: "14px",
+            fontWeight: "500",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            animation: "slideUp 0.3s ease-out",
+          }}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+          <span>✅ Account data restored from Filecoin backup</span>
+        </div>
+      )}
     </div>
   );
 }
